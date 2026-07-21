@@ -897,7 +897,9 @@
     --account-modal-primary: var(--bs-primary, #0f6efd);
     --account-modal-border: #d8e1ee;
     --account-modal-muted: #7183a3;
+
     z-index: 1055;
+    overflow: hidden;
   }
 
   .account-modal__backdrop {
@@ -907,18 +909,24 @@
 
   .account-modal__dialog {
     z-index: 1056;
+    display: flex;
     width: min(94vw, 40rem);
     max-width: min(94vw, 40rem);
-    max-height: none;
+    height: auto;
+    max-height: calc(100dvh - 2rem);
     margin: 1rem auto;
   }
 
   .account-modal__panel {
     position: relative;
-    overflow: hidden;
-    max-height: none;
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-height: calc(100dvh - 2rem);
+    overflow: hidden;
     border: 1px solid #dbe3ee;
     border-radius: 0.75rem;
     background: #ffffff;
@@ -931,6 +939,7 @@
       opacity: 0;
       transform: translateY(12px) scale(0.98);
     }
+
     to {
       opacity: 1;
       transform: translateY(0) scale(1);
@@ -941,16 +950,17 @@
     position: absolute;
     top: 0.75rem;
     inset-inline-end: 0.85rem;
-    z-index: 3;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 2rem;
     height: 2rem;
+    padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.14);
     color: #ffffff;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     cursor: pointer;
     transition:
       background 0.15s ease,
@@ -960,8 +970,8 @@
   }
 
   .account-modal__close:hover {
-    background: #ffffff;
     border-color: #ffffff;
+    background: #ffffff;
     color: var(--account-modal-primary);
   }
 
@@ -976,23 +986,23 @@
 
   .account-modal__header {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     display: flex;
+    flex: 0 0 auto;
     align-items: center;
     gap: 0.9rem;
     min-height: 5.5rem;
     padding: 0.5rem 1.15rem;
     padding-inline-end: 3.5rem;
+    overflow: hidden;
     border-bottom: 0;
     background: var(--account-modal-primary);
     text-align: start;
-    flex-shrink: 0;
-    overflow: hidden;
   }
 
   .account-modal__header-copy {
-    min-width: 0;
     flex: 1 1 auto;
+    min-width: 0;
   }
 
   .account-modal__title {
@@ -1008,38 +1018,66 @@
     position: relative;
     z-index: 1;
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
-    flex: 1;
+    min-width: 0;
     min-height: 0;
-    overflow: visible;
+    overflow: hidden;
     background: #ffffff;
   }
 
   .account-modal__body {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     gap: 0.7rem;
+    min-width: 0;
     min-height: 0;
     padding: 0.75rem 1.1rem;
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: #b9c6d8 transparent;
+  }
+
+  .account-modal__body::-webkit-scrollbar {
+    width: 0.42rem;
+  }
+
+  .account-modal__body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .account-modal__body::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #b9c6d8;
+  }
+
+  .account-modal__body::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
   }
 
   .account-modal__footer {
+    position: relative;
+    z-index: 2;
     display: flex;
-    align-items: center;
     flex: 0 0 auto;
-    padding: 0 1.1rem 0.8rem;
-    border-top: 0;
+    align-items: center;
+    padding: 0.65rem 1.1rem 0.8rem;
+    border-top: 1px solid #eef2f7;
     background: #ffffff;
+    box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.035);
   }
 
   .account-modal__avatar-wrap {
     position: relative;
     display: inline-grid;
-    place-items: center;
-    cursor: pointer;
     flex-shrink: 0;
+    place-items: center;
     border-radius: 50%;
+    cursor: pointer;
     transition: transform 0.16s ease;
   }
 
@@ -1052,13 +1090,13 @@
   }
 
   .account-modal__avatar {
+    display: inline-grid;
     width: 4.4rem;
     height: 4.4rem;
-    border-radius: 50%;
-    border: 3px solid #ffffff;
-    background: #e8f1ff;
-    display: inline-grid;
     place-items: center;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    background: #e8f1ff;
     box-shadow: 0 4px 12px rgba(8, 48, 118, 0.2);
     transition:
       border-color 0.2s ease,
@@ -1077,9 +1115,9 @@
   }
 
   .account-modal__avatar-cartoon {
+    display: block;
     width: 100%;
     height: 100%;
-    display: block;
   }
 
   .account-modal__avatar-wrap:hover .account-modal__avatar {
@@ -1091,14 +1129,14 @@
     position: absolute;
     inset-inline-start: -0.05rem;
     bottom: 0;
+    display: inline-grid;
     width: 1.75rem;
     height: 1.75rem;
-    border-radius: 999px;
+    place-items: center;
     border: 2px solid #ffffff;
+    border-radius: 999px;
     background: #ffffff;
     color: var(--account-modal-primary);
-    display: inline-grid;
-    place-items: center;
     font-size: 0.78rem;
     box-shadow: 0 2px 6px rgba(8, 48, 118, 0.22);
     transition:
@@ -1127,8 +1165,8 @@
   .account-modal__field {
     display: grid;
     gap: 0.25rem;
-    margin: 0;
     min-width: 0;
+    margin: 0;
   }
 
   .account-modal__field--full {
@@ -1170,16 +1208,17 @@
   .account-modal__textarea,
   .account-modal__select {
     width: 100%;
+    min-width: 0;
     min-height: 2.45rem;
-    border: 1px solid var(--account-modal-border);
-    border-radius: 0.5rem;
-    background: #ffffff;
-    color: #0f172a;
     padding-block: 0.35rem;
     padding-inline: 0.75rem;
+    border: 1px solid var(--account-modal-border);
+    border-radius: 0.5rem;
+    outline: none;
+    background: #ffffff;
+    color: #0f172a;
     font-size: 0.86rem;
     text-align: start;
-    outline: none;
     transition:
       border-color 0.15s ease,
       box-shadow 0.15s ease,
@@ -1205,13 +1244,13 @@
   .account-modal__textarea:focus,
   .account-modal__select:focus {
     border-color: var(--account-modal-primary);
-    box-shadow: 0 0 0 3px rgba(15, 110, 253, 0.1);
     background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(15, 110, 253, 0.1);
   }
 
   .account-modal__textarea {
     min-height: 3.6rem;
-    max-height: 5.5rem;
+    max-height: 7rem;
     resize: vertical;
     line-height: 1.5;
   }
@@ -1220,6 +1259,7 @@
     position: relative;
     display: flex;
     align-items: center;
+    min-width: 0;
   }
 
   .account-modal__select-wrap .account-modal__select {
@@ -1230,8 +1270,8 @@
   }
 
   .account-modal__select-wrap--compact .account-modal__select {
-    padding-inline-start: 0.65rem;
     min-height: 2.45rem;
+    padding-inline-start: 0.65rem;
   }
 
   .account-modal__select-icon {
@@ -1253,6 +1293,7 @@
   .account-modal__link {
     display: inline-flex;
     align-items: center;
+    align-self: flex-start;
     gap: 0.3rem;
     margin-top: 0.15rem;
     padding: 0;
@@ -1321,13 +1362,14 @@
     justify-content: center;
     gap: 0.25rem;
     min-height: 2.45rem;
+    padding-inline: 0.75rem;
     border: 1px solid #d8e1ee;
     border-radius: 0.5rem;
     background: #ffffff;
     font-size: 0.86rem;
     font-weight: 600;
+    white-space: nowrap;
     cursor: pointer;
-    padding-inline: 0.75rem;
     transition:
       border-color 0.15s ease,
       background 0.15s ease,
@@ -1340,8 +1382,8 @@
 
   .account-modal__balance-toggle--debit {
     border-color: #edcccc;
-    color: #b42318;
     background: #fff8f7;
+    color: #b42318;
   }
 
   .account-modal__balance-toggle--debit:hover {
@@ -1351,8 +1393,8 @@
 
   .account-modal__balance-toggle--credit {
     border-color: #c5d9f6;
-    color: #0b5ed7;
     background: #f3f7fe;
+    color: #0b5ed7;
   }
 
   .account-modal__balance-toggle--credit:hover {
@@ -1369,13 +1411,13 @@
     width: 100%;
     min-width: 0;
     min-height: 2.45rem;
+    padding: 0.35rem 0.7rem;
     border: 1px solid var(--account-modal-border);
     border-radius: 0.5rem;
+    outline: none;
     background: #ffffff;
-    padding: 0.35rem 0.7rem;
     font-size: 0.86rem;
     text-align: start;
-    outline: none;
     transition:
       border-color 0.15s ease,
       box-shadow 0.15s ease;
@@ -1394,13 +1436,14 @@
     display: inline-grid;
     width: 2.45rem;
     height: 2.45rem;
+    padding: 0;
     place-items: center;
     border: 1px solid #bfdbfe;
     border-radius: 0.5rem;
     background: #ffffff;
     color: var(--account-modal-primary);
-    cursor: pointer;
     font-size: 0.85rem;
+    cursor: pointer;
     transition:
       background 0.15s ease,
       border-color 0.15s ease,
@@ -1408,8 +1451,8 @@
   }
 
   .account-modal__balance-add:hover:not(:disabled) {
-    background: #dbeafe;
     border-color: #93c5fd;
+    background: #dbeafe;
   }
 
   .account-modal__balance-add:active:not(:disabled) {
@@ -1473,17 +1516,41 @@
     font-size: 1.15rem;
   }
 
+  @media (max-height: 760px) {
+    .account-modal__dialog {
+      max-height: calc(100dvh - 1rem);
+      margin-block: 0.5rem;
+    }
+
+    .account-modal__panel {
+      max-height: calc(100dvh - 1rem);
+    }
+
+    .account-modal__header {
+      min-height: 4.75rem;
+    }
+
+    .account-modal__avatar {
+      width: 3.75rem;
+      height: 3.75rem;
+    }
+
+    .account-modal__body {
+      padding-block: 0.65rem;
+    }
+  }
+
   @media (max-width: 640px) {
     .account-modal.qa-modal :global(.modal-dialog.account-modal__dialog),
     .account-modal__dialog {
       width: min(96vw, 40rem);
       max-width: min(96vw, 40rem);
-      max-height: none;
+      max-height: calc(100dvh - 1rem);
       margin: 0.5rem auto;
     }
 
     .account-modal__panel {
-      max-height: none;
+      max-height: calc(100dvh - 1rem);
     }
 
     .account-modal__header {
@@ -1494,10 +1561,12 @@
     .account-modal__body {
       gap: 0.7rem;
       padding: 0.75rem 0.9rem;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     .account-modal__footer {
-      padding: 0 0.9rem 0.75rem;
+      padding: 0.65rem 0.9rem 0.75rem;
     }
 
     .account-modal__identity-grid,
@@ -1517,6 +1586,16 @@
   }
 
   @media (max-width: 400px) {
+    .account-modal__dialog {
+      width: calc(100vw - 0.75rem);
+      max-width: calc(100vw - 0.75rem);
+      margin: 0.375rem auto;
+    }
+
+    .account-modal__panel {
+      max-height: calc(100dvh - 0.75rem);
+    }
+
     .account-modal__header {
       gap: 0.7rem;
       min-height: 5.4rem;
@@ -1525,8 +1604,8 @@
     }
 
     .account-modal__avatar {
-      width: 4.35rem;
-      height: 4.35rem;
+      width: 4rem;
+      height: 4rem;
     }
 
     .account-modal__title {
@@ -1552,6 +1631,11 @@
 
     .account-modal__balance-add {
       width: 100%;
+    }
+
+    .account-modal__submit {
+      width: 100%;
+      margin-inline-start: 0;
     }
   }
 </style>

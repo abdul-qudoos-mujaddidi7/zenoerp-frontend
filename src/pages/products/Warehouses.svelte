@@ -148,7 +148,6 @@
   showStats={showSummaryCards}
   showFooter={!loading && filteredWarehouses.length > 0}
   dense={true}
-  contained={false}
   contentClass="warehouses-index-content"
   tablePadding={true}>
   <svelte:fragment slot="actions">
@@ -213,7 +212,7 @@
   {:else}
     <DataTable
       ariaLabel={t('Warehouses')}
-      minWidth="880px"
+       minWidth="900px"
       dense={true}
       striped={true}
       hover={false}
@@ -321,6 +320,27 @@
 <WarehouseModal bind:this={warehouseModalRef} on:saved={loadWarehouses} />
 
 <style>
+
+
+:global(.warehouses-index-content) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+:global(.warehouses-index-content .data-table-wrap) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+:global(.warehouses-index-content .pagination-shell) {
+  margin-top: auto;
+}
+
   .cursor-pointer {
     cursor: pointer;
   }

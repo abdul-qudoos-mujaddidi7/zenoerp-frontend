@@ -1,36 +1,40 @@
 <script>
-  import {t, lang, translate_org_type} from "../i18n/i18n";
-  $: _lang = $lang;
-  $: _translate_org_type = $translate_org_type;
+  import ProductsIndex from './products/ProductsIndex.svelte';
+  import Warehouses from './products/Warehouses.svelte';
+  import Returns from './settings/Returns.svelte';
+  import Wastes from './Wastes.svelte';
 
-  import ProductsIndex from "./products/ProductsIndex.svelte";
-  import Warehouses from "./products/Warehouses.svelte";
-  import Returns from "./settings/Returns.svelte";
-  import Wastes from "./Wastes.svelte";
-
-  export let page = "products";
+  export let page = 'products';
 </script>
 
-<section class="stock-page">
-  <div class="stock-tab-content">
-    {#if page === "products"}
-      <ProductsIndex />
-    {:else if page === "warehouses"}
-      <Warehouses />
-    {:else if page === "returns"}
-      <Returns />
-    {:else if page === "wastes"}
-      <Wastes />
-    {/if}
-  </div>
-</section>
+<div class="stock-route-page">
+  {#if page === 'products'}
+    <ProductsIndex />
+  {:else if page === 'warehouses'}
+    <Warehouses />
+  {:else if page === 'returns'}
+    <Returns />
+  {:else if page === 'wastes'}
+    <Wastes />
+  {/if}
+</div>
 
 <style>
-  .stock-page {
+  .stock-route-page {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
     min-width: 0;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
   }
 
-  .stock-tab-content {
-    min-width: 0;
+  .stock-route-page :global(.index-page-layout),
+  .stock-route-page :global(.index-page),
+  .stock-route-page :global(.warehouses-page) {
+    flex: 1 1 auto;
+    min-height: 0;
   }
 </style>

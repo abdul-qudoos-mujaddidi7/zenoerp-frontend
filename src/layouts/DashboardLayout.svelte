@@ -297,10 +297,14 @@
         <Wastes />
       {:else if loc.startsWith('/dashboard/wastes/')}
         <WasteView {wasteId} />
-      {:else if loc === '/dashboard/stock'}
-        <Stock page="products" />
+        {:else if loc === '/dashboard/stock'}
+        <div class="route-fill">
+          <Stock page="products" />
+        </div>
       {:else if loc.startsWith('/dashboard/stock/')}
-        <Stock page={stockPage} />
+        <div class="route-fill">
+          <Stock page={stockPage} />
+        </div>
       {:else if loc === '/dashboard/services'}
         <ServicesIndex />
       {:else if loc === '/dashboard/stock-transactions'}
@@ -311,8 +315,10 @@
         <Product id={productId} page={productPage} />
       {:else if loc === '/dashboard/reports'}
         <Reports />
-      {:else if loc.startsWith('/dashboard/settings/')}
-        <Settings page={settingPage} />
+        {:else if loc.startsWith('/dashboard/settings/')}
+        <div class="route-fill">
+          <Settings page={settingPage} />
+        </div>
       {:else if loc === '/dashboard/subscription'}
         <Subscription />
       {:else if loc === '/dashboard/users'}
@@ -376,6 +382,17 @@
     flex-direction: column;
     overflow: hidden;
   }
+  
+
+  .route-fill {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
 
   /* Non-list form pages still need to scroll the whole page */
   .erp-page-main:not(:has([class*='-table-card'])):not(:has(.table-card)):not(:has(.journals-card)):not(:has(.exchanges-card)):not(:has(.card > .card-body.p-0)):not(:has(.card > .card-body .table-responsive)) {
