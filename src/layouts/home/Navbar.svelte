@@ -30,6 +30,29 @@
       <a href="/#" class="zeno-nav__brand" aria-label="Zeno ERP home">
         <img src="/img/logo.png" alt="ZenoERP" />
       </a>
+    </div>
+
+    <nav class="zeno-nav__links d-none d-xl-flex" aria-label="Primary navigation">
+      {#each ['home', 'features', 'pricing', 'contact'] as item (item)}
+        <button
+          type="button"
+          class="zeno-nav__link {activeNav === item ? 'zeno-nav__link--active' : ''}"
+          on:click={() => onNavigate(item)}>
+          {label(item)}
+        </button>
+      {/each}
+    </nav>
+
+    <div class="zeno-nav__actions">
+      {#if isAuthenticated}
+        <button class="btn zeno-btn-primary btn-sm" type="button" on:click={onDashboard}>
+          Dashboard
+        </button>
+      {:else}
+        <button class="btn zeno-btn-primary zeno-nav__login btn-sm" type="button" on:click={onLogin}>
+          {label('login')}
+        </button>
+      {/if}
 
       <div class="dropdown zeno-nav__lang">
         <button
@@ -56,29 +79,6 @@
           {/each}
         </ul>
       </div>
-    </div>
-
-    <nav class="zeno-nav__links d-none d-xl-flex" aria-label="Primary navigation">
-      {#each ['home', 'features', 'pricing', 'contact'] as item (item)}
-        <button
-          type="button"
-          class="zeno-nav__link {activeNav === item ? 'zeno-nav__link--active' : ''}"
-          on:click={() => onNavigate(item)}>
-          {label(item)}
-        </button>
-      {/each}
-    </nav>
-
-    <div class="zeno-nav__actions">
-      {#if isAuthenticated}
-        <button class="btn zeno-btn-primary btn-sm" type="button" on:click={onDashboard}>
-          Dashboard
-        </button>
-      {:else}
-        <button class="btn zeno-btn-primary zeno-nav__login btn-sm" type="button" on:click={onLogin}>
-          {label('login')}
-        </button>
-      {/if}
 
       <button
         class="btn zeno-btn-ghost btn-sm d-none d-md-inline-flex"
