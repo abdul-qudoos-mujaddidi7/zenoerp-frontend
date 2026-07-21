@@ -244,362 +244,605 @@
   }, 0);
 </script>
 
-<div class="card shadow-2 mt-4 purchase-items-card" bind:this={itemsTableRoot}>
+<div class="card purchase-items-card" bind:this={itemsTableRoot}>
   <div class="card-body">
-   
+    <header class="purchase-items-header">
+      <div class="purchase-items-heading">
+        <span class="purchase-items-heading__icon" aria-hidden="true">
+          <i class="bi bi-cart-plus"></i>
+        </span>
 
-    <input type="text" class="position-absolute opacity-0" bind:value={barcodeInput} on:keydown={handleBarcode} />
+        <div class="purchase-items-heading__copy">
+          <h5 class="purchase-items-title">{t('Purchase Items')}</h5>
+        </div>
+      </div>
 
-    <div class="row g-3 mb-4 purchase-items-add-row">
-      <div class="col-12 position-relative">
-        <div class="input-group input-group-sm purchase-unified-input-group">
-          <span class="input-group-text purchase-product-search-icon" aria-hidden="true">
-            <i class="bi bi-search"></i>
-          </span>
+      <div class="purchase-items-header__summary">
+        <span class="purchase-items-count">
+          <i class="bi bi-box-seam" aria-hidden="true"></i>
+          {items.length} {t('Items')}
+        </span>
+
+        <strong class="purchase-items-header-total" dir="ltr">
+          {Number(total || 0).toLocaleString(undefined, {
+            maximumFractionDigits: 3,
+          })}
+          <small>{t(currency)}</small>
+        </strong>
+      </div>
+    </header>
+
+    <input
+      type="text"
+      class="purchase-barcode-input"
+      bind:value={barcodeInput}
+      on:keydown={handleBarcode}
+      aria-hidden="true"
+      tabindex="-1" />
+
+    <section class="purchase-items-entry" aria-label={t('Add Item')}>
+      <div class="purchase-entry-field purchase-entry-field--product position-relative">
+        <label class="purchase-entry-label" for="purchase-product-search">
+          {t('Product')}
+        </label>
+
+        <div class="purchase-product-search">
+          <i class="bi bi-search" aria-hidden="true"></i>
+
           <input
+            id="purchase-product-search"
             bind:this={searchInput}
             type="text"
-            class="form-control form-control-sm"
             bind:value={search}
+            autocomplete="off"
             on:focus={() => (showDropdown = true)}
             placeholder={t('Search product by name, barcode, or SKU...')} />
+
+          {#if search}
+            <button
+              type="button"
+              class="purchase-search-clear"
+              aria-label={t('Clear')}
+              title={t('Clear')}
+              on:click={() => {
+                search = '';
+                selectedProduct = null;
+                showDropdown = false;
+                searchInput?.focus();
+              }}>
+              <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+          {/if}
         </div>
+
         {#if showDropdown && filteredProducts.length > 0}
           <div
             use:portal
-            class="list-group shadow purchase-items-dropdown"
+            class="list-group purchase-items-dropdown"
             style={productDropdownStyle}>
-            {#each filteredProducts as p}
-              <button type="button" class="list-group-item list-group-item-action" on:click={() => selectProduct(p)}>
-                <div class="d-flex justify-content-between">
-                  <span>{p.name}</span>
-                  <small>{categories.find((c) => c.id === p.category_id)?.name || t('Category')}</small>
-                </div>
+            {#each filteredProducts as p (p.id)}
+              <button
+                type="button"
+                class="purchase-product-option"
+                on:click={() => selectProduct(p)}>
+                <span class="purchase-product-option__icon" aria-hidden="true">
+                  <i class="bi bi-box-seam"></i>
+                </span>
+
+                <span class="purchase-product-option__copy">
+                  <strong>{p.name}</strong>
+                  <small>
+                    {categories.find((c) => c.id === p.category_id)?.name ||
+                      t('Category')}
+                  </small>
+                </span>
+
+                <span class="purchase-product-option__stock">
+                  <small>{t('Stock')}</small>
+                  <strong dir="ltr">
+                    {Number(p.quantity || 0).toLocaleString(undefined, {
+                      maximumFractionDigits: 3,
+                    })}
+                  </strong>
+                </span>
               </button>
             {/each}
           </div>
         {/if}
 
         {#if selectedProduct}
-          <div class="form-text mt-0 {selectedProduct.quantity == 0 ? 'text-danger' : ''}">
-            {t('Quantity')}:
-            <span dir="ltr"
-              >{Number(selectedProduct.quantity || 0).toLocaleString(undefined, {
-                maximumFractionDigits: 3,
-              })}</span>
-            {units.find((u) => u.id === selectedProduct.product_unit_id)?.name || t('Unit')}
+          <div
+            class="purchase-selected-stock"
+            class:is-empty={Number(selectedProduct.quantity || 0) <= 0}>
+            <i class="bi bi-boxes" aria-hidden="true"></i>
+            <span>
+              {t('Available Stock')}:
+              <strong dir="ltr">
+                {Number(selectedProduct.quantity || 0).toLocaleString(undefined, {
+                  maximumFractionDigits: 3,
+                })}
+              </strong>
+              {units.find((u) => u.id === selectedProduct.product_unit_id)?.name ||
+                t('Unit')}
+            </span>
           </div>
         {/if}
       </div>
-      <div class="purchase-search-unit">
-        <select class="form-select form-select-sm" bind:value={unit} aria-label={t('Unit')}>
-          <option value={0}>{t('Unit')}</option>
-          {#each units as productUnit}
-            <option value={productUnit.id}>{productUnit.name}</option>
-          {/each}
-        </select>
-      </div>
-      <div class="purchase-search-price">
-        <input
-          type="number"
-          class="form-control form-control-sm"
-          min="0"
-          bind:value={unit_price}
-          placeholder={t('Purchase Price')}
-          aria-label={t('Purchase Price')} />
-        <span>{unit_price_currency ? t(unit_price_currency) : t(currency)}</span>
-      </div>
-      <button type="button" class="purchase-search-add-btn" on:click={addItem}>
-        <i class="bi bi-plus-lg" aria-hidden="true"></i>
-        {t('Add Item')}
-      </button>
-    </div>
 
-    <div class="table-responsive">
-      <table class="table table-hover align-middle purchase-items-table">
-        <thead class="table-light">
+      <label class="purchase-entry-field">
+        <span class="purchase-entry-label">{t('Unit')}</span>
+
+        <div class="purchase-entry-control">
+          <i class="bi bi-rulers" aria-hidden="true"></i>
+
+          <select bind:value={unit} aria-label={t('Unit')}>
+            <option value={0}>{t('Select Unit')}</option>
+            {#each units as productUnit (productUnit.id)}
+              <option value={productUnit.id}>{productUnit.name}</option>
+            {/each}
+          </select>
+
+          <i class="bi bi-chevron-down purchase-entry-chevron" aria-hidden="true"></i>
+        </div>
+      </label>
+
+      <label class="purchase-entry-field">
+        <span class="purchase-entry-label">{t('Purchase Price')}</span>
+
+        <div class="purchase-entry-control purchase-entry-control--price">
+          <i class="bi bi-cash-stack" aria-hidden="true"></i>
+
+          <input
+            type="number"
+            min="0"
+            step="any"
+            bind:value={unit_price}
+            placeholder="0.00"
+            aria-label={t('Purchase Price')} />
+
+          <span>
+            {unit_price_currency ? t(unit_price_currency) : t(currency)}
+          </span>
+        </div>
+      </label>
+
+      <button
+        type="button"
+        class="purchase-search-add-btn"
+        disabled={!selectedProduct}
+        on:click={addItem}>
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        <span>{t('Add Item')}</span>
+      </button>
+    </section>
+
+    <div class="purchase-items-table-scroll">
+      <table class="purchase-items-table">
+        <thead>
           <tr>
             <th class="purchase-item-col-product">{t('Product')}</th>
+
             {#if enable_heaviness}
-              <th class="text-center">{t('Heaviness')}</th>
+              <th class="purchase-item-col-heaviness">{t('Heaviness')}</th>
             {/if}
+
             {#if enable_batch}
-              <th class="text-center purchase-item-col-batch">{t('Batch No')}</th>
+              <th class="purchase-item-col-batch">{t('Batch No')}</th>
             {/if}
+
             {#if enable_manufacturing_date}
-              <th class="text-center purchase-item-col-date">{t('Manufacturing Date')}</th>
+              <th class="purchase-item-col-date">{t('Manufacturing Date')}</th>
             {/if}
+
             {#if enable_expiry_date}
-              <th class="text-center purchase-item-col-date">{t('Expiry Date')}</th>
+              <th class="purchase-item-col-date">{t('Expiry Date')}</th>
             {/if}
-            <th class="text-center purchase-item-col-quantity">{t('Quantity')}</th>
-            <th class="text-center purchase-item-col-price">{t('Buy Price')}</th>
-            <th class="text-center purchase-item-col-price">{t('Sell Price')}</th>
+
+            <th class="purchase-item-col-quantity">{t('Quantity')}</th>
+            <th class="purchase-item-col-price">{t('Buy Price')}</th>
+            <th class="purchase-item-col-sell-price">{t('Sell Price')}</th>
+
             {#if enable_purchase_items_discount}
-              <th class="text-center purchase-item-col-discount">{t('Discount')}</th>
+              <th class="purchase-item-col-discount">{t('Discount')}</th>
             {/if}
-            <th class="text-center purchase-item-col-subtotal">{t('Subtotal')}</th>
-            <th class="text-center purchase-item-col-actions">{t('Actions')}</th>
+
+            <th class="purchase-item-col-subtotal">{t('Subtotal')}</th>
+            <th class="purchase-item-col-actions">{t('Actions')}</th>
           </tr>
         </thead>
+
         <tbody>
-          {#each items as item, index}
+          {#each items as item, index (item.id || `${item.product_id}-${index}`)}
             <tr>
               <td class="purchase-item-product-cell">
                 <div class="purchase-item-product">
+                  <span class="purchase-item-number">{index + 1}</span>
+
+                  <span class="purchase-item-product-icon" aria-hidden="true">
+                    <i class="bi bi-box-seam"></i>
+                  </span>
+
                   <span class="purchase-item-product-copy">
-                    <strong class="purchase-item-product-name">{item.product_name}</strong>
+                    <strong class="purchase-item-product-name">
+                      {item.product_name}
+                    </strong>
+
                     <small>
-                      {t('Quantity')}:
-                      {Number(item.stock || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })}
-                      {units.find((u) => u.id === item.product_unit_id)?.name || t('Unit')}
+                      {t('Stock')}:
+                      <span dir="ltr">
+                        {Number(item.stock || 0).toLocaleString(undefined, {
+                          maximumFractionDigits: 3,
+                        })}
+                      </span>
+                      {units.find((u) => u.id === item.product_unit_id)?.name ||
+                        t('Unit')}
                     </small>
                   </span>
                 </div>
               </td>
 
               {#if enable_heaviness}
-                <td class="text-center">
-                  <div class="input-group input-group-sm purchase-unified-input-group purchase-item-cell-group">
-                    <input
-                      type="number"
-                      class="form-control form-control-sm"
-                      bind:value={item.preUnitPrice}
-                      on:input={() => recalc(index)} />
-                    <span class="input-group-text">{t('USD')} {t('Price')}</span>
-                    <input
-                      type="number"
-                      class="form-control form-control-sm"
-                      bind:value={item.preUnitQuantity}
-                      on:input={() => recalc(index)} />
-                    <span class="input-group-text">{t('ton')}</span>
-                    <input
-                      type="number"
-                      class="form-control form-control-sm"
-                      bind:value={item.heaviness}
-                      on:input={() => recalc(index)} />
-                    <span class="input-group-text">{t('Heaviness')}</span>
+                <td class="purchase-item-col-heaviness">
+                  <div class="purchase-item-heaviness">
+                    <label>
+                      <span>{t('USD')} {t('Price')}</span>
+                      <input
+                        type="number"
+                        step="any"
+                        bind:value={item.preUnitPrice}
+                        on:input={() => recalc(index)} />
+                    </label>
+
+                    <label>
+                      <span>{t('ton')}</span>
+                      <input
+                        type="number"
+                        step="any"
+                        bind:value={item.preUnitQuantity}
+                        on:input={() => recalc(index)} />
+                    </label>
+
+                    <label>
+                      <span>{t('Heaviness')}</span>
+                      <input
+                        type="number"
+                        step="any"
+                        bind:value={item.heaviness}
+                        on:input={() => recalc(index)} />
+                    </label>
                   </div>
                 </td>
               {/if}
 
               {#if enable_batch}
-                <td class="text-center purchase-item-col-batch">
-                  <div class="input-group input-group-sm purchase-unified-input-group purchase-item-cell-group">
-                    <input type="text" class="form-control form-control-sm" bind:value={item.batch} />
-                  </div>
-                </td>
-              {/if}
-              {#if enable_manufacturing_date}
-                <td class="text-center purchase-item-col-date">
-                  <div class="purchase-item-datepicker">
-                    <AppDatePicker bind:value={item.manufacturing_date} on:change={handleItemDateChange} />
-                  </div>
-                </td>
-              {/if}
-              {#if enable_expiry_date}
-                <td class="text-center purchase-item-col-date">
-                  <div class="purchase-item-datepicker">
-                    <AppDatePicker bind:value={item.expiry_date} on:change={handleItemDateChange} />
+                <td class="purchase-item-col-batch">
+                  <div class="purchase-item-field">
+                    <input
+                      type="text"
+                      bind:value={item.batch}
+                      placeholder={t('Batch No')}
+                      aria-label={t('Batch No')} />
                   </div>
                 </td>
               {/if}
 
-              <td class="text-center purchase-item-col-quantity">
-                <div class="input-group input-group-sm purchase-unified-input-group purchase-item-cell-group">
+              {#if enable_manufacturing_date}
+                <td class="purchase-item-col-date">
+                  <div class="purchase-item-datepicker">
+                    <AppDatePicker
+                      bind:value={item.manufacturing_date}
+                      on:change={handleItemDateChange} />
+                  </div>
+                </td>
+              {/if}
+
+              {#if enable_expiry_date}
+                <td class="purchase-item-col-date">
+                  <div class="purchase-item-datepicker">
+                    <AppDatePicker
+                      bind:value={item.expiry_date}
+                      on:change={handleItemDateChange} />
+                  </div>
+                </td>
+              {/if}
+
+              <td class="purchase-item-col-quantity">
+                <div class="purchase-item-field purchase-item-field--with-suffix">
                   {#if enable_heaviness}
-                    <span class="input-group-text"
-                      >{Number(item.quantity || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })}</span>
+                    <span class="purchase-item-readonly-value" dir="ltr">
+                      {Number(item.quantity || 0).toLocaleString(undefined, {
+                        maximumFractionDigits: 3,
+                      })}
+                    </span>
                   {:else}
                     <input
                       type="number"
-                      class="form-control form-control-sm"
+                      min="0"
+                      step="any"
                       bind:value={item.quantity}
-                      on:input={() => recalc(index)} />
+                      on:input={() => recalc(index)}
+                      aria-label={t('Quantity')} />
                   {/if}
-                  <span class="input-group-text"
-                    >{units.find((u) => u.id === item.product_unit_id)?.name || t('Unit')}</span>
+
+                  <span class="purchase-item-suffix">
+                    {units.find((u) => u.id === item.product_unit_id)?.name ||
+                      t('Unit')}
+                  </span>
                 </div>
               </td>
 
-              <td class="text-center purchase-item-col-price">
-                <div class="input-group input-group-sm purchase-unified-input-group purchase-item-cell-group">
+              <td class="purchase-item-col-price">
+                <div class="purchase-item-field purchase-item-field--with-suffix">
                   {#if enable_heaviness}
-                    <span class="input-group-text"
-                      >{Number(item.unit_price || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })}</span>
+                    <span class="purchase-item-readonly-value" dir="ltr">
+                      {Number(item.unit_price || 0).toLocaleString(undefined, {
+                        maximumFractionDigits: 3,
+                      })}
+                    </span>
                   {:else}
                     <input
                       type="number"
-                      class="form-control form-control-sm"
+                      min="0"
+                      step="any"
                       bind:value={item.unit_price}
                       on:input={() => {
                         if (item.enablePercent) {
                           item.sell_price = Number(
-                            parseFloat(item.unit_price) +
-                              (parseFloat(item.unit_price) * parseFloat(item.benefit_percent)) / 100,
+                            Number(item.unit_price || 0) +
+                              (Number(item.unit_price || 0) *
+                                Number(item.benefit_percent || 0)) /
+                                100,
                           ).toFixed(2);
                         }
+
                         recalc(index);
-                      }} />
+                      }}
+                      aria-label={t('Buy Price')} />
                   {/if}
 
-                  <span class="input-group-text">{t(item.unit_price_currency)}</span>
+                  <span class="purchase-item-suffix">
+                    {t(item.unit_price_currency || currency)}
+                  </span>
                 </div>
               </td>
 
-              <td class="text-center purchase-item-col-price">
-                <div class="input-group input-group-sm purchase-unified-input-group purchase-item-cell-group">
+              <td class="purchase-item-col-sell-price">
+                <div class="purchase-item-field purchase-item-sell-field">
                   {#if enable_product_benefit_percentage}
                     <button
                       type="button"
-                      class="btn {item.enablePercent ? 'btn-warning' : 'btn-outline-secondary'} purchase-item-toggle-btn btn-sm"
+                      class="purchase-item-toggle"
+                      class:is-active={item.enablePercent}
                       title={t('Percent')}
                       aria-label={t('Percent')}
                       on:click={() => {
                         item.enablePercent = !item.enablePercent;
+
                         if (!item.enablePercent) {
-                          if (item.unit_price && item.sell_price < item.unit_price) {
+                          if (
+                            Number(item.unit_price || 0) &&
+                            Number(item.sell_price || 0) < Number(item.unit_price || 0)
+                          ) {
                             item.sell_price = item.unit_price;
                           }
+
                           item.sell_price_currency = item.unit_price_currency;
                         }
-                        setTimeout(() => {
-                          if (window.mdb) {
-                            document.querySelectorAll('[data-mdb-input-init]').forEach((el) => {
-                              new window.mdb.Input(el);
-                            });
-                            document.querySelectorAll('.dropdown-toggle').forEach((el) => {
-                              new window.mdb.Dropdown(el);
-                            });
-                          }
-                        }, 50);
-                      }}
-                      ><i class="bi bi-percent"></i>
+
+                        recalc(index);
+                      }}>
+                      <i class="bi bi-percent" aria-hidden="true"></i>
                     </button>
                   {/if}
 
                   {#if item.enablePercent}
                     <input
                       type="number"
+                      min="0"
+                      step="any"
+                      class="purchase-item-percent-input"
                       id="percentage_markup_{index}"
-                      class="form-control form-control-sm"
                       bind:value={item.benefit_percent}
                       on:input={() => {
                         item.sell_price = Number(
-                          parseFloat(item.unit_price) +
-                            (parseFloat(item.unit_price) * parseFloat(item.benefit_percent)) / 100,
+                          Number(item.unit_price || 0) +
+                            (Number(item.unit_price || 0) *
+                              Number(item.benefit_percent || 0)) /
+                              100,
                         ).toFixed(2);
-                      }} />
+
+                        recalc(index);
+                      }}
+                      aria-label={t('Percent')} />
                   {/if}
+
                   <input
                     type="number"
-                    class="form-control form-control-sm"
+                    min="0"
+                    step="any"
                     disabled={item.enablePercent}
                     bind:value={item.sell_price}
-                    on:input={() => recalc(index)} />
-                  <span class="input-group-text">{t(item.sell_price_currency)}</span>
+                    on:input={() => recalc(index)}
+                    aria-label={t('Sell Price')} />
+
+                  <span class="purchase-item-suffix">
+                    {t(item.sell_price_currency || currency)}
+                  </span>
                 </div>
               </td>
 
               {#if enable_purchase_items_discount}
                 <td class="purchase-item-col-discount">
-                  <div class="input-group input-group-sm purchase-unified-input-group purchase-item-cell-group">
+                  <div class="purchase-item-field purchase-item-discount-field">
                     <button
                       type="button"
-                      class="btn btn-sm btn-{item.discount_type === 'fixed' ? 'outline-secondary' : 'success'} purchase-item-toggle-btn"
+                      class="purchase-item-toggle"
+                      class:is-active={item.discount_type === 'percent'}
                       title={t('Discount')}
                       aria-label={t('Discount')}
                       on:click={() => {
                         if (item.discount_type === 'percent') {
-                          item.discount_amount = Number(item.total_amount * (item.discount_amount / 100)).toFixed(2);
+                          item.discount_amount = Number(
+                            Number(item.total_amount || 0) *
+                              (Number(item.discount_amount || 0) / 100),
+                          ).toFixed(2);
                           item.discount_type = 'fixed';
                         } else {
                           item.discount_amount =
-                            item.total_amount > 0
-                              ? Number((item.discount_amount / item.total_amount) * 100).toFixed(2)
+                            Number(item.total_amount || 0) > 0
+                              ? Number(
+                                  (Number(item.discount_amount || 0) /
+                                    Number(item.total_amount || 0)) *
+                                    100,
+                                ).toFixed(2)
                               : 0;
                           item.discount_type = 'percent';
                         }
-                        setTimeout(() => {
-                          if (window.mdb) {
-                            document
-                              .querySelectorAll('[data-mdb-input-init]')
-                              .forEach((el) => new window.mdb.Input(el));
-                          }
-                        }, 100);
-                      }}><i class="bi bi-{item.discount_type === 'fixed' ? 'cash-stack' : 'percent'}"></i></button>
+
+                        recalc(index);
+                      }}>
+                      <i
+                        class="bi bi-{item.discount_type === 'fixed'
+                          ? 'cash-stack'
+                          : 'percent'}"
+                        aria-hidden="true"></i>
+                    </button>
 
                     <input
                       type="number"
+                      min="0"
+                      step="any"
                       id="discountAmount_{index}"
-                      class="form-control form-control-sm"
                       bind:value={item.discount_amount}
                       on:input={() => {
                         if (item.discount_amount === '') {
                           item.discount_amount = null;
-                        } else if (item.discount_amount < 0) {
+                        } else if (Number(item.discount_amount) < 0) {
                           item.discount_amount = 0;
-                        } else if (item.discount_type !== 'percent' && item.discount_amount > item.total_amount) {
-                          item.discount_amount = item.total_amount;
-                        } else if (item.discount_type === 'percent' && item.discount_amount > 100) {
+                        } else if (
+                          item.discount_type !== 'percent' &&
+                          Number(item.discount_amount) > Number(item.total_amount || 0)
+                        ) {
+                          item.discount_amount = Number(item.total_amount || 0);
+                        } else if (
+                          item.discount_type === 'percent' &&
+                          Number(item.discount_amount) > 100
+                        ) {
                           item.discount_amount = 100;
                         } else {
                           item.discount_amount = Number(item.discount_amount);
                         }
-                        recalc(index);
-                      }} />
 
-                    <span class="input-group-text">
-                      {item.discount_type == 'fixed'
-                        ? ''
-                        : Number((item.total_amount * item.discount_amount) / 100 || 0).toFixed(2)}
-                      {item.unit_price_currency ? t(item.unit_price_currency) : t(currency)}
+                        recalc(index);
+                      }}
+                      aria-label={t('Discount')} />
+
+                    <span class="purchase-item-suffix purchase-item-discount-suffix">
+                      {#if item.discount_type === 'percent'}
+                        {Number(
+                          (Number(item.total_amount || 0) *
+                            Number(item.discount_amount || 0)) /
+                            100,
+                        ).toLocaleString(undefined, {
+                          maximumFractionDigits: 2,
+                        })}
+                      {/if}
+                      {t(item.unit_price_currency || currency)}
                     </span>
                   </div>
-
                 </td>
               {/if}
-              <td class="fw-bold text-center purchase-item-subtotal purchase-item-col-subtotal">
+
+              <td class="purchase-item-col-subtotal">
                 <div class="purchase-item-money">
-                  <strong>
-                    {#if item.unit_price_currency && currency && item.unit_price_currency !== currency}
-                      {exchangeRate(item.subtotal, item.unit_price_currency, currency).toLocaleString(undefined, {
+                  <strong dir="ltr">
+                    {#if
+                      item.unit_price_currency &&
+                      currency &&
+                      item.unit_price_currency !== currency}
+                      {Number(
+                        exchangeRate(item.subtotal, item.unit_price_currency, currency),
+                      ).toLocaleString(undefined, {
                         maximumFractionDigits: 3,
                       })}
                     {:else}
-                      {Number(item.subtotal || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })}
+                      {Number(item.subtotal || 0).toLocaleString(undefined, {
+                        maximumFractionDigits: 3,
+                      })}
                     {/if}
                   </strong>
-                  <small>{t(item.unit_price_currency && currency && item.unit_price_currency !== currency ? currency : item.unit_price_currency)}</small>
+
+                  <small>
+                    {t(
+                      item.unit_price_currency &&
+                        currency &&
+                        item.unit_price_currency !== currency
+                        ? currency
+                        : item.unit_price_currency || currency,
+                    )}
+                  </small>
                 </div>
               </td>
-              <td class="text-center purchase-item-actions purchase-item-col-actions">
-                <button type="button" class="purchase-item-more-btn" title={t('Actions')} aria-label={t('Actions')}>
-                  <i class="bi bi-three-dots-vertical"></i>
-                </button>
+
+              <td class="purchase-item-actions purchase-item-col-actions">
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-danger"
+                  class="purchase-item-delete"
                   title={t('Delete')}
                   aria-label={t('Delete')}
-                  on:click={() => removeItem(index)}><i class="bi bi-trash" aria-hidden="true"></i></button>
+                  on:click={() => removeItem(index)}>
+                  <i class="bi bi-trash3" aria-hidden="true"></i>
+                </button>
               </td>
             </tr>
           {/each}
+
+          {#if items.length === 0}
+            <tr class="purchase-items-empty-row">
+              <td
+                colspan={6 +
+                  Number(enable_heaviness) +
+                  Number(enable_batch) +
+                  Number(enable_manufacturing_date) +
+                  Number(enable_expiry_date) +
+                  Number(enable_purchase_items_discount)}>
+                <div class="purchase-items-empty">
+                  <span aria-hidden="true">
+                    <i class="bi bi-cart-plus"></i>
+                  </span>
+
+                  <strong>{t('No purchase items added')}</strong>
+                  <p>
+                    {t('Search for a product above and add it to this purchase.')}
+                  </p>
+                </div>
+              </td>
+            </tr>
+          {/if}
         </tbody>
       </table>
     </div>
 
     {#if items.length > 0}
-      <div class="text-end mt-3 purchase-items-total-row">
-        <button type="button" class="purchase-items-clear-btn" on:click={clearItems}>
-          <i class="bi bi-trash"></i>{t('Clear All')}
+      <footer class="purchase-items-total-row">
+        <button
+          type="button"
+          class="purchase-items-clear-btn"
+          on:click={clearItems}>
+          <i class="bi bi-trash3" aria-hidden="true"></i>
+          <span>{t('Clear All')}</span>
         </button>
-        <h5 class="mb-0">
-          {t('Total')}:
-          <span class="text-primary">{total.toFixed(2)} {t(currency)}</span>
-        </h5>
-      </div>
+
+        <div class="purchase-items-grand-total">
+          <span>{t('Total')}</span>
+          <strong dir="ltr">
+            {Number(total || 0).toLocaleString(undefined, {
+              maximumFractionDigits: 3,
+            })}
+          </strong>
+          <small>{t(currency)}</small>
+        </div>
+      </footer>
     {/if}
   </div>
 </div>
@@ -615,9 +858,12 @@
   {warehouse_products}
   on:saved={async () => {
     products = await db.products.where('status').equals(1).toArray();
-    products = products.filter((p) => (p.product_status ? p.product_status == 'active' : p.status == 1));
+    products = products.filter((p) =>
+      p.product_status ? p.product_status === 'active' : p.status === 1,
+    );
 
     const newProduct = products[products.length - 1];
+
     if (newProduct) {
       items.push({
         product_id: newProduct.id,
@@ -642,6 +888,7 @@
         sell_price_currency: newProduct.sell_currency || '',
         subtotal: Number(newProduct.buy_price) || 0,
       });
+
       items = [...items];
       dispatch('update', { items });
     }
@@ -649,1250 +896,1175 @@
 
 <style>
   .purchase-items-card {
-    border: 0;
-  }
+    --purchase-primary: var(--bs-primary, #2f6fed);
+    --purchase-primary-dark: #1d4ed8;
+    --purchase-border: #dfe6ef;
+    --purchase-border-soft: #edf1f6;
+    --purchase-text: #172033;
+    --purchase-muted: #718096;
 
-  .purchase-items-title {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #0f172a;
-    font-size: 0.9rem;
-    font-weight: 800;
-    text-align: start;
-  }
-
-  .purchase-items-title::before {
-    content: '';
-    width: 4px;
-    height: 18px;
-    border-radius: 999px;
-    background: #0f6efd;
-  }
-
-  .purchase-items-card {
-    border: 1px solid #e5eaf2;
-    border-radius: 12px;
-    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04) !important;
-    overflow: hidden;
+    width: 100%;
+    margin-top: 1rem !important;
+    overflow: visible;
+    border: 1px solid var(--purchase-border);
+    border-radius: 0.875rem;
     background: #ffffff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.055) !important;
   }
 
   .purchase-items-card :global(.card-body) {
-    padding: 0.75rem 0.9rem;
-  }
-
-  .purchase-items-heading {
-    padding: 0.1rem 0.15rem 0.55rem;
-    border-bottom: 1px solid #eef2f7;
-  }
-
-  .purchase-items-title {
-    color: #27364d;
-    font-weight: 800;
-    font-size: 0.88rem;
-    letter-spacing: -0.01em;
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-  }
-
-  .purchase-items-title i {
-    color: #0f6efd;
-    font-size: 0.9rem;
-  }
-
-  .purchase-items-add-row {
-    display: block;
-    padding-block: 0.85rem;
-    padding-inline: 0;
-    background: #ffffff;
-    border: 0;
-    border-radius: 12px;
-  }
-
-  .purchase-items-add-row > .col-12 {
-    width: 100%;
-    padding-inline: 0;
-  }
-
-  .purchase-items-add-row .purchase-unified-input-group {
-    width: 100%;
-    margin: 0;
-  }
-
-  .purchase-unified-input-group,
-  .purchase-item-cell-group {
-    display: flex;
-    align-items: stretch;
-    width: 100%;
-    min-width: 0;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #ffffff;
-    height: 32px;
-    min-height: 32px;
-  }
-
-  .purchase-unified-input-group:focus-within,
-  .purchase-item-cell-group:focus-within {
-    border-color: #93c5fd;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
-  }
-
-  .purchase-unified-input-group :global(.form-control),
-  .purchase-item-cell-group :global(.form-control) {
-    border: 0 !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    flex: 1 1 auto;
-    min-width: 0;
-    height: 100% !important;
-    min-height: 0 !important;
-    background: #ffffff !important;
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-
-  .purchase-unified-input-group :global(.form-control:focus),
-  .purchase-item-cell-group :global(.form-control:focus) {
-    border: 0 !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-  }
-
-  .purchase-unified-input-group :global(.input-group-text),
-  .purchase-item-cell-group :global(.input-group-text) {
-    border: 0 !important;
-    border-radius: 0 !important;
-    background: #ffffff !important;
-    color: #64748b;
-    font-weight: 600;
-    font-size: 0.78rem;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    height: 100%;
-  }
-
-  .purchase-unified-input-group :global(.input-group-text:not(:first-child)),
-  .purchase-item-cell-group :global(.input-group-text:not(:first-child)) {
-    border-inline-start: 1px solid #e2e8f0 !important;
-  }
-
-  .purchase-unified-input-group :global(.input-group-text:first-child:not(:last-child)),
-  .purchase-item-cell-group :global(.input-group-text:first-child:not(:last-child)) {
-    border-inline-end: 1px solid #e2e8f0 !important;
-  }
-
-  .purchase-unified-input-group :global(.purchase-input-addon-btn),
-  .purchase-unified-input-group :global(.btn-info) {
-    border: 0 !important;
-    border-inline-start: 1px solid #e2e8f0 !important;
-    border-radius: 0 !important;
-    padding: 0 0.65rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    align-self: stretch;
-    box-shadow: none !important;
-    background: #eff6ff !important;
-    color: #0f6efd;
-  }
-
-  .purchase-unified-input-group :global(.purchase-product-quick-btn) {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    gap: 0.35rem;
-    width: auto !important;
-    min-width: auto !important;
-    padding: 0 0.65rem !important;
-    border: none !important;
-    background: #0f6efd !important;
-    color: #ffffff !important;
-    font-size: 0.72rem !important;
-    font-weight: 700 !important;
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .purchase-unified-input-group :global(.purchase-product-quick-btn:hover),
-  .purchase-unified-input-group :global(.purchase-product-quick-btn:focus) {
-    background: #1d4ed8 !important;
-    color: #ffffff !important;
-  }
-
-  .purchase-unified-input-group :global(.purchase-product-quick-btn i),
-  .purchase-product-quick-btn__text {
-    display: inline-block;
-    flex-shrink: 0;
-    white-space: nowrap;
-    line-height: 1;
-    border: none;
-  }
-
-  .purchase-item-toggle-btn {
-    border: 0 !important;
-    border-radius: 0 !important;
-    border-inline-end: 1px solid #e2e8f0 !important;
-    width: 32px;
-    min-width: 32px;
-    padding: 0 !important;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    align-self: stretch;
-    flex-shrink: 0;
-    line-height: 1;
-    box-shadow: none !important;
-  }
-
-  .purchase-items-add-row :global(input.form-control),
-  .purchase-items-card :global(input.form-control),
-  .purchase-items-card :global(textarea.form-control) {
-    background-color: #ffffff !important;
-    background: #ffffff !important;
-  }
-
-  .purchase-items-add-row :global(.btn-primary) {
-    border-radius: 10px;
-    font-weight: 700;
-    min-height: 32px;
-    background: linear-gradient(180deg, #3b82f6 0%, #0f6efd 100%);
-    border: none;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22);
-  }
-
-  .purchase-items-dropdown {
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
-  }
-
-  .purchase-items-dropdown :global(.list-group-item) {
-    border: 0;
-    font-weight: 600;
-    font-size: 0.82rem;
-  }
-
-  .purchase-items-dropdown :global(.list-group-item:hover) {
-    background: #eff6ff;
-    color: #0f6efd;
-  }
-
-  .purchase-items-table :global(thead th) {
-    font-size: 0.68rem;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #64748b;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 0.7rem 0.55rem;
-    white-space: nowrap;
-  }
-
-  .purchase-items-table {
-    width: 100%;
-    min-width: 78rem;
-    margin-bottom: 0;
-    table-layout: fixed;
-    border-collapse: separate;
-    border-spacing: 0;
-    border: 1px solid #edf1f6;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  .purchase-items-table :global(tbody td) {
-    border-bottom: 1px solid #edf1f6;
-    border-inline-start: 1px solid #f3f5f8;
-    font-size: 0.72rem;
-    vertical-align: middle;
-    padding: 0.38rem 0.4rem;
-    color: #526177;
-  }
-
-  .purchase-items-table :global(tbody tr:nth-child(even)) {
-    background: #fbfdff;
-  }
-
-  .purchase-items-table :global(tbody tr:hover) {
-    background: #f0f7ff !important;
-  }
-
-  .purchase-items-table :global(.form-control),
-  .purchase-items-table :global(.input-group) {
-    min-width: 0;
-  }
-
-  .purchase-items-table :global(.form-control) {
-    border-radius: 8px;
-    border-color: #e2e8f0;
-    background-color: #ffffff !important;
-    font-size: 0.8rem;
-    font-weight: 600;
-    height: 32px;
-  }
-
-  .purchase-items-table .purchase-item-cell-group,
-  .purchase-items-table .purchase-item-datepicker,
-  .purchase-items-table .purchase-item-datepicker.purchase-unified-input-group {
-    height: 30px;
-    min-height: 30px;
-    border: 0 !important;
-    border-radius: 5px !important;
-    background: transparent !important;
-  }
-
-  .purchase-items-table .purchase-item-cell-group:focus-within,
-  .purchase-items-table .purchase-item-datepicker:focus-within {
-    background: #f8fbff !important;
-    box-shadow: inset 0 0 0 1px #bfdbfe;
-  }
-
-  .purchase-items-table .purchase-item-cell-group :global(.form-control),
-  .purchase-items-table .purchase-item-datepicker :global(.form-control),
-  .purchase-items-table .purchase-item-cell-group :global(.input-group-text) {
-    background: transparent !important;
-    font-size: 0.7rem;
-  }
-
-  .purchase-item-product {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    font-weight: 650;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .purchase-item-product-name {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .purchase-item-col-product {
-    width: 10rem;
-  }
-
-  .purchase-item-col-batch {
-    width: 7rem;
-  }
-
-  .purchase-item-col-date {
-    width: 10rem;
-  }
-
-  .purchase-item-col-quantity {
-    width: 8.5rem;
-  }
-
-  .purchase-item-col-price {
-    width: 9rem;
-  }
-
-  .purchase-item-col-discount {
-    width: 11rem;
-  }
-
-  .purchase-item-col-subtotal {
-    width: 9rem;
-  }
-
-  .purchase-item-col-actions {
-    width: 4.5rem;
-  }
-
-  .purchase-item-datepicker {
-    width: 100%;
-    min-width: 0;
-    height: 32px;
-    min-height: 32px;
-    border: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-  }
-
-  .purchase-item-datepicker.date-picker-control,
-  .purchase-item-datepicker.purchase-unified-input-group {
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 8px !important;
-  }
-
-  .purchase-item-datepicker :global(.persian-date-text),
-  .purchase-item-datepicker :global(.input-group-text.persian-date-text) {
-    display: none !important;
-  }
-
-  .purchase-item-datepicker :global(.gregorian-date-text) {
-    flex: 1 1 auto;
-    justify-content: flex-start;
-    border-inline-end: 0;
-    padding-inline: 0.55rem;
-    font-size: 0.72rem;
-    min-height: 32px;
-    height: 32px;
-  }
-
-  .purchase-item-datepicker :global(.date-picker-icon) {
-    height: 32px;
-    min-height: 32px;
-    max-height: 32px;
-    flex: 0 0 30px;
-    width: 30px;
-    min-width: 30px;
-  }
-
-  .purchase-item-stock {
-    margin-top: 0.28rem;
-    font-size: 0.68rem;
-    line-height: 1.25;
-    color: #94a3b8;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .purchase-item-stock.text-danger {
-    color: #ef4444;
-  }
-
-  .purchase-item-actions {
-    width: 4.5rem;
-  }
-
-  .purchase-items-table :global(.btn-outline-danger) {
-    border-radius: 8px;
-    width: 32px;
-    height: 32px;
     padding: 0;
-    line-height: 1;
-    border-color: #fecaca;
-    color: #ef4444;
-    background: #fff;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
   }
 
-  .purchase-items-total-row {
+  .purchase-barcode-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Header */
+
+  .purchase-items-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 0.75rem !important;
-    padding: 0.45rem 0.55rem;
-    border: 0;
-    border-radius: 7px;
-    background: transparent;
+    gap: 1rem;
+    min-height: 4.75rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--purchase-border-soft);
+    background: #ffffff;
   }
 
-  .purchase-items-total-row :global(h5) {
+  .purchase-items-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .purchase-items-heading__icon {
+    display: inline-grid;
+    flex: 0 0 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: 0.625rem;
+    background: #edf4ff;
+    color: var(--purchase-primary);
     font-size: 1rem;
-    font-weight: 800;
-    color: #334155;
+  }
+
+  .purchase-items-heading__copy {
+    min-width: 0;
+  }
+
+  .purchase-items-title {
     margin: 0;
+    color: var(--purchase-text);
+    font-size: 1rem;
+    font-weight: 850;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
   }
 
-  .purchase-items-total-row :global(.text-primary) {
-    color: #334e78 !important;
-    font-weight: 900;
-    font-size: 0.82rem;
+  .purchase-items-subtitle {
+    margin: 0.15rem 0 0;
+    color: var(--purchase-muted);
+    font-size: 0.75rem;
+    font-weight: 550;
   }
 
-  .purchase-items-clear-btn {
+  .purchase-items-header__summary {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .purchase-items-count {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    min-height: 30px;
-    padding: 0.35rem 0.65rem;
-    border: 1px solid #fee2e2;
-    border-radius: 7px;
-    background: #fff;
-    color: #ef4444;
+    gap: 0.35rem;
+    min-height: 1.75rem;
+    padding-inline: 0.6rem;
+    border: 1px solid #dbe7fb;
+    border-radius: 999px;
+    background: #f4f8ff;
+    color: #526783;
+    font-size: 0.7rem;
+    font-weight: 750;
+  }
+
+  .purchase-items-header-total {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    color: var(--purchase-text);
+    font-size: 1.05rem;
+    font-weight: 900;
+  }
+
+  .purchase-items-header-total small {
+    color: var(--purchase-muted);
     font-size: 0.68rem;
-    font-weight: 700;
+    font-weight: 750;
   }
 
-  .purchase-items-clear-btn:hover:not(:disabled) {
-    border-color: #fecaca;
-    background: #fef2f2;
+  /* Entry toolbar */
+
+  .purchase-items-entry {
+    position: relative;
+    z-index: 20;
+    display: grid;
+    grid-template-columns:
+      minmax(18rem, 1fr)
+      minmax(8rem, 0.28fr)
+      minmax(10rem, 0.36fr)
+      auto;
+    gap: 0.75rem;
+    align-items: end;
+    margin: 0;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--purchase-border-soft);
+    background: #fbfcfe;
   }
 
-  .purchase-items-clear-btn:disabled {
-    opacity: 0.45;
-  }
-
-  /* Spacious purchase-item row, matching the supplied design reference. */
-  .purchase-items-card {
-    border-radius: 14px;
-    box-shadow: 0 10px 30px rgba(35, 50, 85, 0.07) !important;
-  }
-
-  .purchase-items-card .table-responsive {
-    border: 1px solid #e7ebf2;
-    border-radius: 12px;
-    background: #fff;
-    overflow-x: hidden;
-  }
-
-  .purchase-items-table {
+  .purchase-entry-field {
+    display: grid;
+    gap: 0.3rem;
     min-width: 0;
-    border: 0;
-    border-radius: 0;
-  }
-
-  .purchase-items-table :global(thead th) {
-    height: 4.5rem;
-    padding: 0.8rem 0.5rem 0.55rem;
-    border-bottom: 1px solid #e7ebf2;
-    background: #fff;
-    color: #1f2a44;
-    font-size: 0.78rem;
-    font-weight: 850;
-    letter-spacing: 0;
-    text-transform: none;
-    vertical-align: middle;
-  }
-
-  .purchase-items-table :global(thead th:not(.purchase-item-col-product):not(.purchase-item-col-actions)::after) {
-    content: 'ⓘ';
-    display: block;
-    margin-top: 0.28rem;
-    color: #c8ceda;
-    font-size: 0.62rem;
-    line-height: 1;
-  }
-
-  .purchase-items-table :global(tbody tr) {
-    height: 7.4rem;
-    background: #fff !important;
-  }
-
-  .purchase-items-table :global(tbody td) {
-    padding: 1rem 0.5rem;
-    border-inline-start: 0;
-    border-bottom: 0;
-    background: #fff;
-    font-size: 0.78rem;
-  }
-
-  .purchase-item-col-product {
-    width: 13rem;
-  }
-
-  .purchase-item-col-batch {
-    width: 6.5rem;
-  }
-
-  .purchase-item-col-date {
-    width: 9rem;
-  }
-
-  .purchase-item-col-quantity {
-    width: 6.5rem;
-  }
-
-  .purchase-item-col-price,
-  .purchase-item-col-subtotal {
-    width: 7rem;
-  }
-
-  .purchase-item-col-discount {
-    width: 8rem;
-  }
-
-  .purchase-item-col-actions {
-    width: 5rem;
-  }
-
-  .purchase-item-product {
-    min-height: 3.9rem;
-    padding: 0.5rem 0.65rem !important;
-    border: 1px solid #dfe5ee !important;
-    border-radius: 10px;
-    flex-direction: row-reverse;
-    background: #fff;
-  }
-
-  .purchase-item-product-cell {
-    vertical-align: middle !important;
-  }
-
-  .purchase-item-product-cell .purchase-item-product {
-    width: 100%;
-    height: 3.9rem;
     margin: 0;
   }
 
-  .purchase-item-product-copy {
+  .purchase-entry-field--product {
+    align-self: stretch;
+  }
+
+  .purchase-entry-label {
+    color: #536176;
+    font-size: 0.7rem;
+    font-weight: 750;
+    line-height: 1.25;
+    text-align: start;
+  }
+
+  .purchase-product-search,
+  .purchase-entry-control {
+    position: relative;
     display: flex;
+    align-items: center;
     min-width: 0;
-    flex: 1;
-    flex-direction: column;
-    gap: 0.2rem;
-    text-align: end;
+    height: 2.625rem;
+    border: 1px solid #d6dfeb;
+    border-radius: 0.625rem;
+    background: #ffffff;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
   }
 
-  .purchase-item-product-name {
-    color: #18243a;
-    font-size: 0.86rem;
-    font-weight: 850;
+  .purchase-product-search:hover,
+  .purchase-entry-control:hover {
+    border-color: #bdcadd;
   }
 
-  .purchase-item-product-copy small {
+  .purchase-product-search:focus-within,
+  .purchase-entry-control:focus-within {
+    border-color: #78a4f5;
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.1);
+  }
+
+  .purchase-product-search > i,
+  .purchase-entry-control > i:first-child {
+    flex: 0 0 2.35rem;
+    width: 2.35rem;
+    color: #8a99ad;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .purchase-product-search input,
+  .purchase-entry-control input,
+  .purchase-entry-control select {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #26364b;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: start;
+  }
+
+  .purchase-entry-control select {
+    padding-inline-end: 2rem;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .purchase-product-search input::placeholder,
+  .purchase-entry-control input::placeholder {
+    color: #9aa7b8;
+    font-weight: 500;
+  }
+
+  .purchase-search-clear {
+    display: inline-grid;
+    flex: 0 0 1.8rem;
+    width: 1.8rem;
+    height: 1.8rem;
+    margin-inline-end: 0.35rem;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 0.4rem;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 0.65rem;
+    cursor: pointer;
+  }
+
+  .purchase-search-clear:hover {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .purchase-entry-chevron {
+    position: absolute;
+    inset-inline-end: 0.75rem;
+    color: #8795a8 !important;
+    font-size: 0.6rem;
+    pointer-events: none;
+  }
+
+  .purchase-entry-control--price > span {
+    display: inline-flex;
+    align-items: center;
+    align-self: stretch;
+    padding-inline: 0.7rem;
+    border-inline-start: 1px solid #e2e8f0;
+    color: #64748b;
+    background: #f8fafc;
+    font-size: 0.7rem;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .purchase-search-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-width: 7.5rem;
+    height: 2.625rem;
+    padding-inline: 1rem;
+    border: 0;
+    border-radius: 0.625rem;
+    background: var(--purchase-primary);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(47, 111, 237, 0.2);
+    transition:
+      background 0.15s ease,
+      transform 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .purchase-search-add-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    background: var(--purchase-primary-dark);
+    box-shadow: 0 6px 16px rgba(47, 111, 237, 0.25);
+  }
+
+  .purchase-search-add-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .purchase-selected-stock {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 1.15rem;
+    margin-top: 0.22rem;
+    color: #62806f;
+    font-size: 0.67rem;
+    font-weight: 600;
+  }
+
+  .purchase-selected-stock.is-empty {
+    color: #dc2626;
+  }
+
+  /* Dropdown */
+
+  .purchase-items-dropdown {
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: 20rem;
+    padding: 0.3rem;
+    border: 1px solid #dce4ef;
+    border-radius: 0.75rem;
+    background: #ffffff;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+  }
+
+  .purchase-product-option {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+    min-height: 3.2rem;
+    padding: 0.45rem 0.55rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--purchase-text);
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .purchase-product-option:hover {
+    background: #f0f6ff;
+  }
+
+  .purchase-product-option__icon {
+    display: inline-grid;
+    flex: 0 0 2rem;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 0.5rem;
+    background: #edf4ff;
+    color: var(--purchase-primary);
+  }
+
+  .purchase-product-option__copy {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.08rem;
+  }
+
+  .purchase-product-option__copy strong {
     overflow: hidden;
-    color: #8a94a8;
-    font-size: 0.66rem;
-    font-weight: 650;
+    color: #26364b;
+    font-size: 0.78rem;
+    font-weight: 800;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .purchase-items-table .purchase-item-cell-group,
-  .purchase-items-table .purchase-item-datepicker,
-  .purchase-items-table .purchase-item-datepicker.purchase-unified-input-group {
-    min-height: 3.55rem;
-    height: 3.55rem;
+  .purchase-product-option__copy small {
     overflow: hidden;
-    border: 1px solid #dfe5ee !important;
-    border-radius: 9px !important;
-    background: #fff !important;
-  }
-
-  .purchase-items-table .purchase-item-cell-group {
-    flex-direction: column;
-  }
-
-  .purchase-items-table .purchase-item-cell-group :global(.form-control) {
-    width: 100%;
-    min-height: 2rem !important;
-    flex: 1 1 auto;
-    padding: 0.3rem 0.45rem;
-    color: #18243a;
-    font-size: 0.82rem;
-    text-align: center;
-  }
-
-  .purchase-items-table .purchase-item-cell-group :global(.input-group-text) {
-    width: 100%;
-    min-height: 1.35rem;
-    height: 1.35rem;
-    justify-content: center;
-    border: 0 !important;
-    border-top: 1px solid #e5e9f0 !important;
-    color: #7c879b;
-    background: #f8f9fc !important;
+    color: var(--purchase-muted);
     font-size: 0.65rem;
+    font-weight: 550;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .purchase-items-table .purchase-item-datepicker {
-    flex-direction: row;
-  }
-
-  .purchase-items-table .purchase-item-datepicker :global(.form-control),
-  .purchase-items-table .purchase-item-datepicker :global(.gregorian-date-text) {
-    height: 100% !important;
-    min-height: 100% !important;
-    padding-inline: 0.45rem;
-    color: #24324b;
-    background: #fff !important;
-    font-size: 0.68rem;
-    text-align: center;
-  }
-
-  .purchase-items-table .purchase-item-datepicker :global(.date-picker-icon) {
-    height: 100% !important;
-    min-height: 100% !important;
-    max-height: none;
-    color: #1d5ccc;
-    background: #fff;
-  }
-
-  .purchase-item-col-discount .purchase-item-cell-group {
-    flex-direction: row;
-  }
-
-  .purchase-item-col-discount .purchase-item-cell-group :global(.input-group-text) {
-    width: auto;
-    min-width: 3rem;
-    height: 100%;
-    border-top: 0 !important;
-    border-inline-start: 1px solid #e5e9f0 !important;
-  }
-
-  .purchase-item-stock {
-    margin-top: 0.25rem;
-    font-size: 0.6rem;
-  }
-
-  .purchase-item-money {
-    display: flex;
-    min-height: 3.55rem;
-    overflow: hidden;
-    flex-direction: column;
-    border: 1px solid #dfe5ee;
-    border-radius: 9px;
-    background: #fff;
-  }
-
-  .purchase-item-money strong {
+  .purchase-product-option__stock {
     display: grid;
-    min-height: 2.15rem;
-    place-items: center;
-    color: #18243a;
-    font-size: 0.82rem;
+    flex-shrink: 0;
+    gap: 0.05rem;
+    color: #526176;
+    text-align: end;
   }
 
-  .purchase-item-money small {
-    display: grid;
-    min-height: 1.35rem;
-    place-items: center;
-    border-top: 1px solid #e5e9f0;
-    color: #7c879b;
-    background: #f8f9fc;
-    font-size: 0.65rem;
+  .purchase-product-option__stock small {
+    color: #94a3b8;
+    font-size: 0.58rem;
+    font-weight: 650;
   }
 
-  .purchase-item-actions {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.55rem;
+  .purchase-product-option__stock strong {
+    font-size: 0.72rem;
+    font-weight: 800;
   }
 
-  .purchase-item-more-btn {
-    display: inline-grid;
-    width: 2rem;
-    height: 2rem;
-    place-items: center;
-    padding: 0;
-    border: 0;
+  /* Table */
+
+  .purchase-items-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto !important;
+    overflow-y: visible;
+    background: #ffffff;
+    scrollbar-width: thin;
+    scrollbar-color: #b9c5d5 transparent;
+  }
+
+  .purchase-items-table-scroll::-webkit-scrollbar {
+    height: 0.45rem;
+  }
+
+  .purchase-items-table-scroll::-webkit-scrollbar-track {
     background: transparent;
-    color: #1763d6;
-    font-size: 1rem;
   }
 
-  .purchase-items-table :global(.btn-outline-danger) {
-    width: 2.45rem;
-    height: 2.45rem;
-    border-radius: 9px;
-    background: #fff7f7;
+  .purchase-items-table-scroll::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #b9c5d5;
   }
 
-  /* Keep purchase-only columns, but match the compact Sale Items row design. */
-  .purchase-items-card .table-responsive {
-    overflow-x: hidden;
-    border: 0;
-    border-radius: 0;
+  .purchase-items-table-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
   }
 
   .purchase-items-table {
     width: 100%;
-    min-width: 0;
+    min-width: 68rem;
+    margin: 0;
     border: 0;
-    border-collapse: collapse;
-    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
+    color: #42516a;
   }
 
-  .purchase-items-table :global(thead th) {
-    height: auto;
-    padding: 0.7rem 0.4rem;
-    border-bottom: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #64748b;
-    font-size: 0.66rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    text-transform: none;
+  .purchase-items-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    height: 2.875rem;
+    padding: 0.55rem 0.625rem;
+    border: 0;
+    border-bottom: 1px solid #dfe5ed;
+    background: #f7f9fc;
+    color: #67768a;
+    font-size: 0.68rem;
+    font-weight: 850;
+    line-height: 1.2;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .purchase-items-table thead th:first-child {
+    text-align: start;
   }
 
-  .purchase-items-table :global(thead th::after) {
-    display: none !important;
+  .purchase-items-table tbody tr {
+    height: 4.25rem;
+    background: #ffffff;
+    transition: background 0.12s ease;
   }
 
-  .purchase-items-table :global(tbody tr) {
-    height: auto;
-    background: #fff !important;
+  .purchase-items-table tbody tr:nth-child(even) {
+    background: #fbfcfe;
   }
 
-  .purchase-items-table :global(tbody tr:nth-child(even)) {
-    background: #fbfdff !important;
+  .purchase-items-table tbody tr:hover {
+    background: #f4f8ff;
   }
 
-  .purchase-items-table :global(tbody tr:hover) {
-    background: #f0f7ff !important;
-  }
-
-  .purchase-items-table :global(tbody td) {
-    padding: 0.55rem 0.35rem;
-    border-bottom: 1px solid #f1f5f9;
+  .purchase-items-table tbody td {
+    height: 4.25rem;
+    padding: 0.45rem 0.5rem;
+    border: 0;
+    border-bottom: 1px solid #e9eef5;
     background: transparent;
-    color: #46536a;
-    font-size: 0.76rem;
+    color: #46566d;
+    font-size: 0.74rem;
+    text-align: center;
     vertical-align: middle;
   }
 
-  .purchase-item-product-cell {
-    padding: 0.55rem 0.4rem !important;
+  /* Product column */
+
+  .purchase-item-col-product {
+    width: 15rem;
+    min-width: 15rem;
+
   }
 
-  .purchase-item-product-cell .purchase-item-product {
-    width: 100%;
-    height: auto;
-    min-height: 0;
-    margin: 0;
-    padding: 0 !important;
-    border: 0 !important;
-    border-radius: 0;
-    background: transparent;
+  .purchase-item-product-cell {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 2;
+    background: #ffffff !important;
+    box-shadow: 1px 0 0 #e9eef5;
+  }
+
+  .purchase-items-table tbody tr:nth-child(even) .purchase-item-product-cell {
+    background: #fbfcfe !important;
+  }
+
+  .purchase-items-table tbody tr:hover .purchase-item-product-cell {
+    background: #f4f8ff !important;
+  }
+
+  .purchase-items-table thead .purchase-item-col-product {
+    inset-inline-start: 0;
+    z-index: 6;
+    background: #fbfcfe;
+    box-shadow: 1px 0 0 #dfe5ed;
+  }
+
+  .purchase-item-product {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+  }
+
+  .purchase-item-number {
+    display: inline-grid;
+    flex: 0 0 1.6rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    place-items: center;
+    border-radius: 0.4rem;
+    background: #f0f3f8;
+    color: #7b899d;
+    font-size: 0.65rem;
+    font-weight: 800;
+  }
+
+  .purchase-item-product-icon {
+    display: inline-grid;
+    flex: 0 0 2rem;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 0.5rem;
+    background: #edf4ff;
+    color: var(--purchase-primary);
+    font-size: 0.85rem;
   }
 
   .purchase-item-product-copy {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
     gap: 0.1rem;
     text-align: start;
   }
 
   .purchase-item-product-name {
-    color: #334155;
+    overflow: hidden;
+    color: #26364b;
     font-size: 0.78rem;
-    font-weight: 700;
+    font-weight: 850;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .purchase-item-product-copy small {
-    color: #94a3b8;
-    font-size: 0.62rem;
-  }
-
-  .purchase-items-table .purchase-item-cell-group,
-  .purchase-items-table .purchase-item-datepicker,
-  .purchase-items-table .purchase-item-datepicker.purchase-unified-input-group {
-    height: 32px;
-    min-height: 32px;
     overflow: hidden;
-    flex-direction: row;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 8px !important;
-    background: #fff !important;
+    color: #8491a4;
+    font-size: 0.63rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .purchase-items-table .purchase-item-cell-group :global(.form-control),
-  .purchase-items-table .purchase-item-datepicker :global(.form-control),
-  .purchase-items-table .purchase-item-datepicker :global(.gregorian-date-text) {
-    width: auto;
-    height: 100% !important;
-    min-height: 0 !important;
+  /* General editable field */
+
+  .purchase-item-field {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    min-width: 6rem;
+    height: 2.25rem;
+    overflow: hidden;
+    border: 1px solid #dbe3ee;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    box-shadow: none;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .purchase-item-field:focus-within {
+    border-color: #78a4f5;
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.08);
+  }
+
+  .purchase-item-field > input {
     flex: 1 1 auto;
-    padding: 0 0.3rem;
-    background: #fff !important;
-    color: #334155;
-    font-size: 0.68rem;
+    width: 100%;
+    min-width: 2.5rem;
+    height: 100%;
+    padding: 0 0.45rem;
+    border: 0;
+    border-radius: 0;
+    outline: 0;
+    background: transparent;
+    color: #26364b;
+    font-size: 0.73rem;
+    font-weight: 700;
+    text-align: center;
+    box-shadow: none;
+  }
+
+  .purchase-item-field > input:disabled {
+    background: #f8fafc;
+    color: #64748b;
+  }
+
+  .purchase-item-field--with-suffix {
+    min-width: 7rem;
+  }
+
+  .purchase-item-readonly-value {
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 3rem;
+    padding-inline: 0.4rem;
+    color: #26364b;
+    font-size: 0.73rem;
+    font-weight: 750;
+  }
+
+  .purchase-item-suffix {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    padding: 0 0.4rem;
+    border-inline-start: 1px solid #e3e8ef;
+    background: #f7f9fc;
+    color: #718096;
+    font-size: 0.62rem;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .purchase-item-toggle {
+    display: inline-grid;
+    flex: 0 0 2.15rem;
+    width: 2.15rem;
+    min-width: 2.15rem;
+    height: 100%;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    border-inline-end: 1px solid #e3e8ef;
+    border-radius: 0;
+    background: #f7f9fc;
+    color: #64748b;
+    font-size: 0.7rem;
+    cursor: pointer;
+    box-shadow: none;
+  }
+
+  .purchase-item-toggle:hover {
+    background: #edf4ff;
+    color: var(--purchase-primary);
+  }
+
+  .purchase-item-toggle.is-active {
+    background: #fff7df;
+    color: #b7791f;
+  }
+
+  .purchase-item-sell-field,
+  .purchase-item-discount-field {
+    min-width: 11rem;
+  }
+
+  .purchase-item-percent-input {
+    max-width: 3.5rem;
+    border-inline-end: 1px solid #e3e8ef !important;
+  }
+
+  .purchase-item-discount-suffix {
+    min-width: 4.75rem;
+  }
+
+  /* Heaviness */
+
+  .purchase-item-col-heaviness {
+    width: 19rem;
+    min-width: 19rem;
+  }
+
+  .purchase-item-heaviness {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(5rem, 1fr));
+    gap: 0.35rem;
+    width: 100%;
+  }
+
+  .purchase-item-heaviness label {
+    display: grid;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #dbe3ee;
+    border-radius: 0.5rem;
+    background: #ffffff;
+  }
+
+  .purchase-item-heaviness label:focus-within {
+    border-color: #78a4f5;
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.07);
+  }
+
+  .purchase-item-heaviness label span {
+    display: block;
+    padding: 0.2rem 0.3rem;
+    border-bottom: 1px solid #e7ebf1;
+    background: #f7f9fc;
+    color: #7b8799;
+    font-size: 0.55rem;
+    font-weight: 750;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .purchase-item-heaviness label input {
+    width: 100%;
+    min-width: 0;
+    height: 1.8rem;
+    padding-inline: 0.35rem;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #26364b;
+    font-size: 0.7rem;
+    font-weight: 700;
     text-align: center;
   }
 
-  .purchase-items-table .purchase-item-cell-group :global(.input-group-text) {
-    width: auto;
+  /* Column widths */
+
+  .purchase-item-col-batch {
+    width: 7rem;
+    min-width: 7rem;
+  }
+
+  .purchase-item-col-date {
+    width: 9rem;
+    min-width: 9rem;
+  }
+
+  .purchase-item-col-quantity {
+    width: 7.5rem;
+    min-width: 7.5rem;
+  }
+
+  .purchase-item-col-price {
+    width: 8.5rem;
+    min-width: 8.5rem;
+  }
+
+  .purchase-item-col-sell-price {
+    width: 12rem;
+    min-width: 12rem;
+  }
+
+  .purchase-item-col-discount {
+    width: 12rem;
+    min-width: 12rem;
+  }
+
+  .purchase-item-col-subtotal {
+    width: 8rem;
+    min-width: 8rem;
+  }
+
+  .purchase-item-col-actions {
+    width: 4rem;
+    min-width: 4rem;
+  }
+
+  /* Datepicker */
+
+  .purchase-item-datepicker {
+    display: flex;
+    width: 100%;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    overflow: hidden;
+    border: 1px solid #dbe3ee;
+    border-radius: 0.5rem;
+    background: #ffffff;
+  }
+
+  .purchase-item-datepicker:focus-within {
+    border-color: #78a4f5;
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.08);
+  }
+
+  .purchase-item-datepicker :global(.date-picker-control) {
+    width: 100%;
     min-width: 0;
     height: 100%;
-    min-height: 0;
-    padding-inline: 0.3rem;
     border: 0 !important;
-    border-inline-start: 1px solid #e2e8f0 !important;
-    background: #fff !important;
-    color: #64748b;
-    font-size: 0.62rem;
+    box-shadow: none !important;
   }
 
-  .purchase-items-table .purchase-item-datepicker :global(.date-picker-icon) {
-    width: 28px;
-    min-width: 28px;
-    height: 100% !important;
-    min-height: 100% !important;
-    color: #64748b;
-    background: #fff;
+  .purchase-item-datepicker :global(.persian-date-text) {
+    display: none !important;
   }
+
+  .purchase-item-datepicker :global(.gregorian-date-text) {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    padding-inline: 0.4rem;
+    border: 0 !important;
+    background: transparent !important;
+    font-size: 0.65rem;
+  }
+
+  .purchase-item-datepicker :global(.date-picker-icon) {
+    flex: 0 0 2rem;
+    width: 2rem;
+    min-width: 2rem;
+    height: 100%;
+    border: 0 !important;
+    border-inline-start: 1px solid #e3e8ef !important;
+    background: #f7f9fc !important;
+  }
+
+  /* Subtotal and actions */
 
   .purchase-item-money {
-    display: block;
-    min-height: 0;
-    overflow: visible;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.3rem;
+    width: 100%;
+    white-space: nowrap;
   }
 
-  .purchase-item-money strong,
-  .purchase-item-money small {
-    display: inline;
-    min-height: 0;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font-size: 0.76rem;
+  .purchase-item-money strong {
+    color: #172033;
+    font-size: 0.8rem;
+    font-weight: 900;
   }
 
   .purchase-item-money small {
-    margin-inline-start: 0.2rem;
-    color: #64748b;
+    color: #718096;
+    font-size: 0.62rem;
+    font-weight: 750;
   }
 
   .purchase-item-actions {
-    gap: 0;
+    text-align: center !important;
   }
 
-  .purchase-item-more-btn {
-    display: none;
-  }
-
-  .purchase-items-table :global(.btn-outline-danger) {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    border-color: #fecaca;
-    background: #fff;
-  }
-
-  .purchase-items-table .purchase-item-col-quantity .purchase-item-cell-group,
-  .purchase-items-table .purchase-item-col-price .purchase-item-cell-group {
-    height: 42px;
-    min-height: 42px;
-    flex-direction: column;
-  }
-
-  .purchase-items-table .purchase-item-col-quantity .purchase-item-cell-group :global(.form-control),
-  .purchase-items-table .purchase-item-col-price .purchase-item-cell-group :global(.form-control) {
-    width: 100%;
-    min-height: 24px !important;
-  }
-
-  .purchase-items-table .purchase-item-col-quantity .purchase-item-cell-group :global(.input-group-text),
-  .purchase-items-table .purchase-item-col-price .purchase-item-cell-group :global(.input-group-text) {
-    width: 100%;
-    height: 17px;
-    min-height: 17px;
-    justify-content: center;
-    border-inline-start: 0 !important;
-    border-top: 1px solid #e2e8f0 !important;
-    background: #f8fafc !important;
-  }
-
-  .purchase-item-col-discount .purchase-item-cell-group {
-    display: grid;
-    height: 42px;
-    min-height: 42px;
-    grid-template-columns: 30px minmax(0, 1fr);
-    grid-template-rows: 24px 17px;
-  }
-
-  .purchase-item-col-discount .purchase-item-toggle-btn {
-    width: 30px;
-    min-width: 30px;
-    height: 100%;
-    grid-column: 1;
-    grid-row: 1 / 3;
-    border: 1px solid #a7f3d0 !important;
-    background: #ecfdf5 !important;
-    color: #059669 !important;
-  }
-
-  .purchase-item-col-discount .purchase-item-toggle-btn:hover,
-  .purchase-item-col-discount .purchase-item-toggle-btn:focus {
-    border-color: #6ee7b7 !important;
-    background: #d1fae5 !important;
-    color: #047857 !important;
-  }
-
-  .purchase-item-col-discount .purchase-item-cell-group :global(.form-control) {
-    width: 100%;
-    min-height: 24px !important;
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .purchase-item-col-discount .purchase-item-cell-group :global(.input-group-text) {
-    width: 100%;
-    height: 17px;
-    min-height: 17px;
-    justify-content: center;
-    grid-column: 2;
-    grid-row: 2;
-    border-inline-start: 0 !important;
-    border-top: 1px solid #e2e8f0 !important;
-    background: #f8fafc !important;
-  }
-
-  .purchase-item-money {
-    display: flex;
-    min-height: 42px;
-    overflow: hidden;
-    flex-direction: column;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    background: #fff;
-  }
-
-  .purchase-item-money strong {
-    display: grid;
-    min-height: 24px;
-    flex: 1;
-    place-items: center;
-    color: #334155;
-    font-size: 0.72rem;
-  }
-
-  .purchase-item-money small {
-    display: grid;
-    width: 100%;
-    min-height: 17px;
-    margin: 0;
-    place-items: center;
-    border-top: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #64748b;
-    font-size: 0.6rem;
-  }
-
-  .purchase-items-table :global(tbody td) {
-    vertical-align: middle !important;
-  }
-
-  .purchase-items-table .purchase-item-datepicker {
-    display: flex;
-    width: 100%;
-    height: 42px;
-    min-height: 42px;
-    align-items: center;
-    overflow: visible;
-    border: 0 !important;
-    background: transparent !important;
-  }
-
-  .purchase-item-datepicker :global(.app-date-field),
-  .purchase-item-datepicker :global(.pdp-container) {
-    width: 100%;
-    min-width: 0;
-    height: 42px;
-    min-height: 42px;
-    margin: 0;
-    gap: 0;
-  }
-
-  .purchase-item-datepicker :global(.app-date-field input),
-  .purchase-item-datepicker :global(.pdp-container input) {
-    width: 100%;
-    height: 42px !important;
-    min-height: 42px !important;
-    margin: 0 !important;
-    padding-block: 0 !important;
-    border-radius: 8px !important;
-    font-size: 0.68rem !important;
-    line-height: 42px;
-  }
-
-  /* Tighter, consistently aligned purchase row controls. */
-  .purchase-items-table .purchase-item-col-quantity .purchase-item-cell-group,
-  .purchase-items-table .purchase-item-col-price .purchase-item-cell-group,
-  .purchase-item-col-discount .purchase-item-cell-group,
-  .purchase-item-money,
-  .purchase-items-table .purchase-item-datepicker,
-  .purchase-item-datepicker :global(.app-date-field),
-  .purchase-item-datepicker :global(.pdp-container) {
-    height: 34px;
-    min-height: 34px;
-  }
-
-  .purchase-items-table .purchase-item-col-quantity .purchase-item-cell-group :global(.form-control),
-  .purchase-items-table .purchase-item-col-price .purchase-item-cell-group :global(.form-control),
-  .purchase-item-col-discount .purchase-item-cell-group :global(.form-control),
-  .purchase-item-money strong {
-    min-height: 20px !important;
-  }
-
-  .purchase-items-table .purchase-item-col-quantity .purchase-item-cell-group :global(.input-group-text),
-  .purchase-items-table .purchase-item-col-price .purchase-item-cell-group :global(.input-group-text),
-  .purchase-item-col-discount .purchase-item-cell-group :global(.input-group-text),
-  .purchase-item-money small {
-    height: 13px;
-    min-height: 13px;
-    line-height: 13px;
-  }
-
-  .purchase-item-col-discount .purchase-item-cell-group {
-    grid-template-rows: 20px 13px;
-  }
-
-  .purchase-item-datepicker :global(.app-date-field input),
-  .purchase-item-datepicker :global(.pdp-container input) {
-    height: 34px !important;
-    min-height: 34px !important;
-    line-height: 34px;
-  }
-
-  .purchase-items-table :global(tbody td .btn-outline-danger) {
-    width: 26px !important;
-    min-width: 26px !important;
-    height: 26px !important;
-    min-height: 26px !important;
-    padding: 0 !important;
-    border-radius: 7px !important;
-    font-size: 0.68rem !important;
-    line-height: 1 !important;
-  }
-
-  .purchase-items-add-row .purchase-unified-input-group {
-    border-radius: 4px;
-  }
-
-  .purchase-items-add-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    flex-wrap: nowrap;
-    gap: 0.75rem;
-  }
-
-  .purchase-items-add-row > .col-12 {
-    width: auto;
-    min-width: 0;
-    flex: 1 1 760px;
-    order: 1;
-  }
-
-  .purchase-items-add-row .purchase-unified-input-group {
-    height: 24px;
-    min-height: 24px;
-    border-color: #dbe4ef;
-    background: #fff;
-  }
-
-  .purchase-product-search-icon {
-    display: inline-flex;
-    width: 40px;
-    align-items: center;
-    justify-content: center;
+  .purchase-item-delete {
+    display: inline-grid;
+    width: 2rem;
+    height: 2rem;
     padding: 0;
-    border: 0 !important;
-    background: transparent !important;
-    color: #64748b !important;
+    place-items: center;
+    border: 1px solid #f3cccc;
+    border-radius: 0.5rem;
+    background: #fff7f7;
+    color: #d64545;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      transform 0.15s ease;
   }
 
-  .purchase-items-add-row :global(.form-control) {
-    height: 22px;
-    min-height: 22px;
-    padding-inline: 0.25rem 0.75rem;
-    border: 0 !important;
-    background: #fff !important;
-    box-shadow: none !important;
+  .purchase-item-delete:hover {
+    transform: translateY(-1px);
+    border-color: #efaaaa;
+    background: #feecec;
+  }
+
+  /* Empty state */
+
+  .purchase-items-empty-row,
+  .purchase-items-empty-row:hover {
+    height: auto !important;
+    background: #ffffff !important;
+  }
+
+  .purchase-items-empty-row td {
+    height: auto !important;
+    padding: 0 !important;
+  }
+
+  .purchase-items-empty {
+    display: grid;
+    min-height: 12rem;
+    place-items: center;
+    align-content: center;
+    gap: 0.35rem;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .purchase-items-empty > span {
+    display: inline-grid;
+    width: 3rem;
+    height: 3rem;
+    place-items: center;
+    border-radius: 0.75rem;
+    background: #edf4ff;
+    color: var(--purchase-primary);
+    font-size: 1.2rem;
+  }
+
+  .purchase-items-empty strong {
+    margin-top: 0.3rem;
     color: #334155;
+    font-size: 0.85rem;
+    font-weight: 800;
   }
 
-  .purchase-items-add-row :global(.form-control::placeholder) {
-    color: #94a3b8;
+  .purchase-items-empty p {
+    margin: 0;
+    color: #8491a4;
+    font-size: 0.72rem;
   }
 
-  .purchase-search-add-btn {
+  /* Footer */
+
+  .purchase-items-total-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 4rem;
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--purchase-border-soft);
+    background: #fbfcfe;
+  }
+
+  .purchase-items-clear-btn {
     display: inline-flex;
-    height: 24px;
-    min-height: 24px;
-    width: auto !important;
-    min-width: 110px;
-    flex: 0 0 auto;
-    order: 2;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
-    padding-inline: 0.85rem;
-    border: 0;
-    border-radius: 4px;
-    background: #0f6efd;
-    color: #fff;
-    font-size: 0.72rem;
-    font-weight: 700;
-    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.18);
+    gap: 0.4rem;
+    min-height: 2.1rem;
+    padding-inline: 0.7rem;
+    border: 1px solid #f1d0d0;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    color: #cf4b4b;
+    font-size: 0.68rem;
+    font-weight: 750;
+    cursor: pointer;
   }
 
-  .purchase-search-unit,
-  .purchase-search-price {
-    position: relative;
-    width: 130px;
-    min-width: 110px;
-    flex: 0 0 130px;
-    order: 2;
+  .purchase-items-clear-btn:hover {
+    border-color: #edb4b4;
+    background: #fff5f5;
   }
 
-  .purchase-search-unit :global(.form-select),
-  .purchase-search-price :global(.form-control) {
-    width: 100%;
-    height: 24px;
-    min-height: 24px;
-    padding-block: 0;
-    border: 1px solid #dbe4ef !important;
-    border-radius: 4px !important;
-    font-size: 0.72rem;
+  .purchase-items-grand-total {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    white-space: nowrap;
   }
 
-  .purchase-search-price :global(.form-control) {
-    padding-inline-end: 2.8rem;
-  }
-
-  .purchase-search-price > span {
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-end: 0.55rem;
-    transform: translateY(-50%);
+  .purchase-items-grand-total > span {
     color: #64748b;
-    font-size: 0.62rem;
-    pointer-events: none;
+    font-size: 0.75rem;
+    font-weight: 750;
   }
 
-  .purchase-search-add-btn {
-    order: 3;
-    align-self: flex-start;
+  .purchase-items-grand-total strong {
+    color: var(--purchase-primary);
+    font-size: 1.05rem;
+    font-weight: 900;
   }
 
-  .purchase-search-add-btn:hover,
-  .purchase-search-add-btn:focus-visible {
-    background: #1d4ed8;
+  .purchase-items-grand-total small {
+    color: #718096;
+    font-size: 0.68rem;
+    font-weight: 750;
   }
 
-  :global([dir='rtl']) .purchase-items-add-row {
-    justify-content: flex-start;
+  /* RTL */
+
+  :global(html[dir='rtl']) .purchase-item-product-cell {
+    box-shadow: -1px 0 0 #e9eef5;
   }
 
-  @media (max-width: 767.98px) {
-    .purchase-items-add-row > .col-12 {
-      width: auto;
-      flex-basis: auto;
+  :global(html[dir='rtl']) .purchase-items-table thead .purchase-item-col-product {
+    box-shadow: -1px 0 0 #dfe5ed;
+  }
+
+  /* Responsive */
+
+  @media (max-width: 1200px) {
+    .purchase-items-entry {
+      grid-template-columns: minmax(16rem, 1fr) 8rem 10rem;
     }
 
     .purchase-search-add-btn {
-      width: auto !important;
-    }
-
-    .purchase-search-unit,
-    .purchase-search-price {
-      width: 92px;
-      min-width: 82px;
-      flex-basis: 92px;
+      grid-column: 1 / -1;
+      width: 100%;
     }
   }
 
-  .purchase-items-table .purchase-item-cell-group,
-  .purchase-items-table .purchase-item-datepicker,
+  @media (max-width: 767.98px) {
+    .purchase-items-card {
+      border-radius: 0.75rem;
+    }
+
+    .purchase-items-header {
+      align-items: flex-start;
+      flex-direction: column;
+      padding: 0.8rem;
+    }
+
+    .purchase-items-header__summary {
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .purchase-items-entry {
+      grid-template-columns: 1fr;
+      padding: 0.8rem;
+    }
+
+    .purchase-search-add-btn {
+      grid-column: auto;
+    }
+
+    .purchase-items-table {
+      min-width: 62rem;
+    }
+
+    .purchase-items-total-row {
+      padding-inline: 0.8rem;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .purchase-items-heading__icon {
+      display: none;
+    }
+
+    .purchase-items-header__summary {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .purchase-items-total-row {
+      align-items: stretch;
+      flex-direction: column-reverse;
+    }
+
+    .purchase-items-clear-btn {
+      width: 100%;
+    }
+  }
+
+  /* Auto-size editable controls by their current value. */
+  .purchase-items-table .purchase-item-field {
+    display: inline-flex;
+    width: fit-content;
+    min-width: 0;
+    max-width: none;
+    vertical-align: middle;
+  }
+
+  .purchase-items-table .purchase-item-field--with-suffix,
+  .purchase-items-table .purchase-item-sell-field,
+  .purchase-items-table .purchase-item-discount-field {
+    min-width: 0;
+  }
+
+  .purchase-items-table .purchase-item-field > input,
+  .purchase-items-table .purchase-item-heaviness input {
+    field-sizing: content;
+    inline-size: auto;
+    width: auto;
+    min-inline-size: 3ch;
+    min-width: 3ch;
+    max-inline-size: none;
+    max-width: none;
+    flex: 0 0 auto;
+  }
+
+  .purchase-items-table .purchase-item-percent-input {
+    max-width: none;
+  }
+
+
+  /* Auto-size the date-picker control to its displayed date value. */
+  .purchase-items-table .purchase-item-datepicker {
+    display: inline-flex;
+    width: fit-content;
+    min-width: 0;
+    max-width: none;
+    vertical-align: middle;
+  }
+
+  .purchase-items-table .purchase-item-datepicker :global(.date-picker-control),
+  .purchase-items-table .purchase-item-datepicker :global(.app-date-field),
+  .purchase-items-table .purchase-item-datepicker :global(.pdp-container) {
+    display: inline-flex;
+    width: fit-content;
+    min-width: 0;
+    max-width: none;
+    flex: 0 0 auto;
+  }
+
   .purchase-items-table .purchase-item-datepicker :global(input),
-  .purchase-items-table .purchase-item-money,
-  .purchase-items-table :global(tbody td .btn-outline-danger) {
-    border-radius: 4px !important;
+  .purchase-items-table .purchase-item-datepicker :global(.gregorian-date-text) {
+    field-sizing: content;
+    inline-size: auto !important;
+    width: auto !important;
+    min-inline-size: 10ch;
+    min-width: 10ch !important;
+    max-inline-size: none;
+    max-width: none !important;
+    flex: 0 0 auto !important;
   }
 
-  .purchase-items-card {
-    border: 1px solid #e2e8f0;
+
+  /* Keep value columns tight around their controls.
+     Extra table space is assigned to the Product column only. */
+  .purchase-items-table .purchase-item-col-product {
+    width: auto;
+    min-width: 15rem;
+  }
+
+  .purchase-items-table .purchase-item-col-batch,
+  .purchase-items-table .purchase-item-col-date,
+  .purchase-items-table .purchase-item-col-quantity,
+  .purchase-items-table .purchase-item-col-price,
+  .purchase-items-table .purchase-item-col-sell-price,
+  .purchase-items-table .purchase-item-col-discount,
+  .purchase-items-table .purchase-item-col-subtotal,
+  .purchase-items-table .purchase-item-col-actions {
+    width: 1%;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .purchase-items-table tbody td.purchase-item-col-batch,
+  .purchase-items-table tbody td.purchase-item-col-date,
+  .purchase-items-table tbody td.purchase-item-col-quantity,
+  .purchase-items-table tbody td.purchase-item-col-price,
+  .purchase-items-table tbody td.purchase-item-col-sell-price,
+  .purchase-items-table tbody td.purchase-item-col-discount,
+  .purchase-items-table tbody td.purchase-item-col-subtotal,
+  .purchase-items-table tbody td.purchase-item-col-actions {
+    padding-inline: 0.25rem;
   }
 
 </style>
+

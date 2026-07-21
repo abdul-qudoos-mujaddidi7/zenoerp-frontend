@@ -671,59 +671,99 @@
 
 <svelte:window on:click={handleWindowClick} />
 
-<div class="container-fluid mt-4 purchase-form-page" bind:this={componentRoot}>
-  <div class="card shadow-2 purchase-form-card purchase-info-section">
-    <div class="card-body">
-      <h4 class="mb-4 purchase-form-title">
-        {#if form.account_id}
-          <button
-            class="btn btn-link btn-sm float-end px-3 fs-6 purchase-balance-btn"
-            on:click={() => {
-              showAccountModal = true;
-            }}>{@html calculatedBalance}</button>
-        {/if}
-        {purchaseId ? t('Edit Purchase') : t('New Purchase')}
-      </h4>
-      <div class="row g-3 purchase-form-fields">
-        <div class="col-md-3">
-          <FilterSelect variant="outline" label={t('Warehouse')} icon="bi-building"
-            value={form.warehouse_id} options={[{value:'',label:t('Select Warehouse')},...warehouses.map((w)=>({value:w.id,label:w.name}))]}
-            on:change={(event)=>(form.warehouse_id=event.detail)} />
-        </div>
-        <div class="col-md-3">
-          <div class="position-relative">
-            <div class="input-group input-group-sm w-100 purchase-unified-input-group purchase-unified-input-group--account">
-              {#if form.account_id}
-                <span
-                  class="form-control form-control-sm purchase-account-selected-name"
-                  role="button"
-                  tabindex="0"
-                  on:click={async () => {
-                    form.account_id = '';
-                    form_account_search = '';
-                    showAccountDropdown = true;
-                    filteredAccounts = suppliers;
-                    await tick();
-                    form_account_search_input?.focus();
-                  }}
-                  on:keydown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.currentTarget.click();
-                    }
-                  }}>
-                  {getAccountName(form.account_id)}
-                </span>
-              {:else}
-                <input
-                  type="text"
-                  class="form-control form-control-sm purchase-account-search-input"
-                  id="form_account_search"
-                  bind:this={form_account_search_input}
-                  bind:value={form_account_search}
-                  placeholder={t('Select Supplier')}
-                  on:input={() => {
-                    showAccountDropdown = true;
+<div class="purchase-create-page" bind:this={componentRoot} dir={t('dir')}>
+
+  <section class="purchase-section purchase-details-section">
+    <header class="purchase-section-header">
+      <div class="purchase-section-heading">
+        <span class="purchase-section-icon" aria-hidden="true">
+          <i class="bi bi-file-earmark-text"></i>
+        </span>
+          <h2>{t('New Purchase')}</h2>
+      </div>
+      <span class="purchase-required-note">
+        <i class="bi bi-asterisk" aria-hidden="true"></i>
+        {t('Required')}
+      </span>
+    </header>
+
+    <div class="purchase-details-grid">
+      <div class="purchase-field">
+        <span class="purchase-field-label">
+          <i class="bi bi-building" aria-hidden="true"></i>
+          {t('Warehouse')}
+        </span>
+
+        <FilterSelect
+          variant="outline"
+         
+          value={form.warehouse_id}
+          options={[
+            { value: '', label: t('Select Warehouse') },
+            ...warehouses.map((w) => ({ value: w.id, label: w.name })),
+          ]}
+          on:change={(event) => (form.warehouse_id = event.detail)} />
+      </div>
+
+      <div class="purchase-field purchase-field--supplier">
+        <span class="purchase-field-label">
+          <i class="bi bi-person" aria-hidden="true"></i>
+          {t('Supplier')}
+        </span>
+
+        <div class="purchase-supplier-control position-relative">
+          <div class="purchase-supplier-input">
+            <span class="purchase-supplier-input__icon" aria-hidden="true">
+              <i class="bi bi-person"></i>
+            </span>
+
+            {#if form.account_id}
+              <button
+                type="button"
+                class="purchase-selected-supplier"
+                on:click={async () => {
+                  form.account_id = '';
+                  form_account_search = '';
+                  showAccountDropdown = true;
+                  filteredAccounts = suppliers;
+                  await tick();
+                  form_account_search_input?.focus();
+                }}>
+                <span>{getAccountName(form.account_id)}</span>
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+              </button>
+            {:else}
+              <input
+                id="form_account_search"
+                bind:this={form_account_search_input}
+                type="text"
+                bind:value={form_account_search}
+                placeholder={t('Select Supplier')}
+                autocomplete="off"
+                on:input={() => {
+                  showAccountDropdown = true;
+                  filteredAccounts = suppliers.filter((acc) => {
+                    const name =
+                      t('Lang') === 'en'
+                        ? acc.name
+                        : t('Lang') === 'fa'
+                          ? acc.name_fa
+                          : t('Lang') === 'ps'
+                            ? acc.name_ps
+                            : acc.name;
+
+                    return (
+                      name &&
+                      name
+                        .toLowerCase()
+                        .includes(form_account_search.trim().toLowerCase())
+                    );
+                  });
+                }}
+                on:focus={() => {
+                  showAccountDropdown = true;
+
+                  if (form_account_search.trim()) {
                     filteredAccounts = suppliers.filter((acc) => {
                       const name =
                         t('Lang') === 'en'
@@ -733,47 +773,43 @@
                             : t('Lang') === 'ps'
                               ? acc.name_ps
                               : acc.name;
-                      return name && name.toLowerCase().includes(form_account_search.trim().toLowerCase());
+
+                      return (
+                        name &&
+                        name
+                          .toLowerCase()
+                          .includes(form_account_search.trim().toLowerCase())
+                      );
                     });
-                  }}
-                  on:focus={() => {
-                    showAccountDropdown = true;
-                    if (form_account_search.trim()) {
-                      filteredAccounts = suppliers.filter((acc) => {
-                        const name =
-                          t('Lang') === 'en'
-                            ? acc.name
-                            : t('Lang') === 'fa'
-                              ? acc.name_fa
-                              : t('Lang') === 'ps'
-                                ? acc.name_ps
-                                : acc.name;
-                        return name && name.toLowerCase().includes(form_account_search.trim().toLowerCase());
-                      });
-                    } else {
-                      filteredAccounts = suppliers;
-                    }
-                  }}
-                  on:blur={() => setTimeout(() => (showAccountDropdown = false), 150)}
-                  autocomplete="off" />
-              {/if}
-              <button
-                class="btn btn-info btn-sm purchase-input-addon-btn purchase-account-quick-btn"
-                type="button"
-                title={t('Add Account')}
-                aria-label={t('Add Account')}
-                on:click={() => {
-                  accountModalRef.openModal();
-                }}>
-                <i class="bi bi-plus-lg" aria-hidden="true"></i><span class="purchase-account-quick-btn__text">{t('Add')}</span>
-              </button>
-            </div>
-            {#if showAccountDropdown && filteredAccounts.length > 0}
-              <ul use:portal class="list-group purchase-form-dropdown" style={accountDropdownStyle}>
-                {#each filteredAccounts as acc}
-                  <li
-                    class="list-group-item list-group-item-action bg-body small px-2 py-1"
-                    style="cursor:pointer"
+                  } else {
+                    filteredAccounts = suppliers;
+                  }
+                }}
+                on:blur={() =>
+                  setTimeout(() => (showAccountDropdown = false), 150)} />
+            {/if}
+
+            <button
+              type="button"
+              class="purchase-add-supplier"
+              title={t('Add Account')}
+              aria-label={t('Add Account')}
+              on:click={() => accountModalRef?.openModal()}>
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+              <span>{t('Add')}</span>
+            </button>
+          </div>
+
+          {#if showAccountDropdown && filteredAccounts.length > 0}
+            <ul
+              use:portal
+              class="purchase-supplier-dropdown"
+              style={accountDropdownStyle}>
+              {#each filteredAccounts as acc (acc.id)}
+                <li>
+                  <button
+                    type="button"
+                    class="purchase-supplier-option"
                     on:mousedown={() => {
                       form.account_id = acc.id;
                       form_account_search =
@@ -786,295 +822,390 @@
                               : acc.name;
                       showAccountDropdown = false;
                     }}>
-                    <span class="badge badge-{getAccountTypeColor(acc.account_type_id)} ms-2 float-end">
-                      {#if accountTypes.find((at) => at.id === acc.account_type_id)?.name}
-                        {t('Lang') === 'en'
-                          ? accountTypes.find((at) => at.id === acc.account_type_id)?.name
-                          : t('Lang') === 'fa'
-                            ? accountTypes.find((at) => at.id === acc.account_type_id)?.name_fa
-                            : t('Lang') === 'ps'
-                              ? accountTypes.find((at) => at.id === acc.account_type_id)?.name_ps
-                              : accountTypes.find((at) => at.id === acc.account_type_id)?.name}
-                      {:else}
-                        N/A
-                      {/if}
+                    <span class="purchase-supplier-option__avatar">
+                      <i class="bi bi-person" aria-hidden="true"></i>
                     </span>
-                    {#if t('Lang') === 'en' && acc.name}{acc.name}{/if}
-                    {#if t('Lang') === 'fa' && acc.name_fa}{acc.name_fa}{/if}
-                    {#if t('Lang') === 'ps' && acc.name_ps}{acc.name_ps}{/if}
-                  </li>
-                {/each}
-              </ul>
-            {/if}
-          </div>
-        </div>
-        <div class="col-md-2">
-          <input readonly type="text" class="form-control form-control-sm" value="{t('Bill #')}: {form.bill_number}" />
-        </div>
-        <div class="col-md-2">
-          <div class="purchase-app-datepicker">
-            <AppDatePicker bind:value={date} required />
-          </div>
-        </div>
-        <div class="col-md-2">
-          <FilterSelect variant="outline" label={t('Currency')} icon="bi-currency-exchange"
-            value={form.currency} options={currencies.map((cur)=>({value:cur.code,label:t(cur.code)}))}
-            on:change={(event)=>(form.currency=event.detail)} />
-        </div>
-      </div>
-    </div>
-  </div>
-  <PurchaseItemsTable bind:items warehouse_id={form.warehouse_id} currency={form.currency} />
-  <div class="row">
-    <div class="col-md-6">
-      <div class="card shadow-2 mt-4 purchase-form-card purchase-form-card--description">
-        <div class="card-body">
-          <p class="mb-3 fw-semibold purchase-payment-title">{t('Description')}</p>
-          <textarea
-            class="form-control form-control-sm"
-            rows="2"
-            bind:value={form.description}
-            placeholder={t('Description')}></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card shadow-2 mt-4 purchase-form-card purchase-form-card--payment">
-        <div class="card-body">
-          <p class="mb-3 fw-semibold purchase-payment-title">{t('Add Payment')}</p>
-          <div class="row g-3 align-items-end">
-            <div class="col-md-12">
-              <div class="purchase-payment-amount-row">
-                <div class="input-group input-group-sm purchase-unified-input-group purchase-unified-input-group--inline">
-                  <input
-                    type="number"
-                    id="paymentAmount"
-                    class="form-control form-control-sm"
-                    placeholder={t('Amount')}
-                    bind:value={paymentAmount}
-                    on:focus={() => {
-                      if (paymentAmount === null || paymentAmount === 0) {
-                        paymentAmount = '';
-                      }
-                    }}
-                    on:input={() => {
-                      if (paymentAmount === '') {
-                        paymentAmount = null;
-                      } else if (paymentAmount < 0) {
-                        paymentAmount = 0;
-                      } else if (paymentAmount > getMaxPaymentAmount()) {
-                        paymentAmount = getMaxPaymentAmount();
-                      } else {
-                        paymentAmount = Number(paymentAmount);
-                      }
-                      if (second_entry_account == treasury_ID) {
-                        let treasury_balance_for_currency = treasury_balance[paymentCurrency] || 0;
-                        if (paymentAmount > treasury_balance_for_currency * -1) {
-                          paymentAmount = Number(treasury_balance_for_currency * -1).toFixed(2);
-                        }
-                      }
-                    }} />
-                </div>
-                <div class="payment-currency-picker">
-                  <button
-                    id="paymentCurrencyDropdown"
-                    class="payment-currency-picker__btn"
-                    type="button"
-                    aria-expanded={showPaymentCurrencyMenu}
-                    aria-haspopup="listbox"
-                    aria-label={t('Currency')}
-                    on:click|stopPropagation={() => (showPaymentCurrencyMenu = !showPaymentCurrencyMenu)}>
-                    {paymentCurrency ? t(paymentCurrency) : t(form.currency || 'AFN')}
-                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+
+                    <span class="purchase-supplier-option__copy">
+                      <strong>
+                        {#if t('Lang') === 'en' && acc.name}{acc.name}{/if}
+                        {#if t('Lang') === 'fa' && acc.name_fa}{acc.name_fa}{/if}
+                        {#if t('Lang') === 'ps' && acc.name_ps}{acc.name_ps}{/if}
+                      </strong>
+
+                      <small>
+                        {#if accountTypes.find((at) => at.id === acc.account_type_id)?.name}
+                          {t('Lang') === 'en'
+                            ? accountTypes.find((at) => at.id === acc.account_type_id)?.name
+                            : t('Lang') === 'fa'
+                              ? accountTypes.find((at) => at.id === acc.account_type_id)?.name_fa
+                              : t('Lang') === 'ps'
+                                ? accountTypes.find((at) => at.id === acc.account_type_id)?.name_ps
+                                : accountTypes.find((at) => at.id === acc.account_type_id)?.name}
+                        {:else}
+                          N/A
+                        {/if}
+                      </small>
+                    </span>
+
+                    <i class="bi bi-chevron-right purchase-supplier-option__arrow" aria-hidden="true"></i>
                   </button>
-                  {#if showPaymentCurrencyMenu}
-                    <ul class="payment-currency-menu" role="listbox">
-                      {#each currencies as cur}
-                        <li role="option" aria-selected={paymentCurrency === cur.code}>
-                          <button
-                            class="payment-currency-menu__item"
-                            class:selected={paymentCurrency === cur.code}
-                            on:click|stopPropagation={() => selectPaymentCurrency(cur.code)}
-                            type="button">
-                            {t(cur.code)}
-                          </button>
-                        </li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </div>
-              </div>
-              <div class="input-group input-group-sm justify-content-end mt-3 purchase-unified-input-group">
-                <input
-                  type="text"
-                  class="form-control"
-                  bind:value={paymentDescription}
-                  placeholder={t('Description')} />
-                <button
-                  id="second_entry_account_search"
-                  class="btn btn-sm purchase-input-addon-btn text-center btn-{second_entry_account == track_ID ? 'danger' : 'light'}"
-                  type="button"
-                  data-mdb-toggle="dropdown"
-                  aria-expanded="false"
-                  on:click={() => {
-                    filteredSecondAccounts = accounts;
-                    showTrackModal = true;
-                  }}
-                  ><i class="bi bi-check-circle"></i>
-                  {#if second_entry_account == track_ID}
-                    {t('Lang') === 'en'
-                      ? accounts.find((a) => a.id === track_ID)?.name
-                      : t('Lang') === 'fa'
-                        ? accounts.find((a) => a.id === track_ID)?.name_fa
-                        : t('Lang') === 'ps'
-                          ? accounts.find((a) => a.id === track_ID)?.name_ps
-                          : accounts.find((a) => a.id === track_ID)?.name}
-                  {:else}
-                    {t('Track')}
-                  {/if}
-                </button>
-                <button
-                  id="second_entry_account_search"
-                  class="btn btn-sm purchase-input-addon-btn purchase-treasury-btn text-center btn-{second_entry_account == treasury_ID ? 'success' : 'light'}"
-                  type="button"
-                  data-mdb-toggle="dropdown"
-                  aria-expanded="false"
-                  on:click={() => {
-                    second_entry_account = treasury_ID;
-                  }}><i class="bi bi-box"></i> {t('Treasury')}</button>
-              </div>
-              <div class="form-text mt-1 text-end mb-3 purchase-treasury-note">
-                {#if second_entry_account == treasury_ID}
-                  <span dir="ltr"
-                    >{Number(treasury_balance[paymentCurrency] || 0).toLocaleString(undefined, {
-                      maximumFractionDigits: 3,
-                    })}</span>
-                  {t(paymentCurrency)}
-                {/if}
-              </div>
-              {#if showTrackModal}
-                <div class="modal-backdrop fade show"></div>
-                <div
-                  class="modal fade show d-block track-picker-layer"
-                  id="trackModal"
-                  tabindex="-1"
-                  aria-labelledby="trackModalLabel"
-                  aria-hidden="true">
-                  <div class="modal-dialog modal-dialog-centered track-picker-dialog">
-                    <div class="modal-content purchase-form-modal track-picker-modal">
-                      <div class="modal-header track-picker-header">
-                        <div class="track-picker-heading">
-                          <span><i class="bi bi-person-check"></i></span>
-                          <div><small>{t('Account')}</small><h5 class="modal-title" id="trackModalLabel">{t('Track')}</h5></div>
-                        </div>
-                        <button
-                          type="button"
-                          class="track-picker-close"
-                          aria-label="Close"
-                          on:click={() => (showTrackModal = false)}><i class="bi bi-x-lg"></i></button>
-                      </div>
-                      <div class="modal-body track-picker-body">
-                        <div class="mb-3">
-                          <div class="input-group track-search-group">
-                            <input
-                              type="text"
-                              class="form-control"
-                              placeholder={t('Search accounts...')}
-                              bind:value={second_entry_account_search}
-                              on:input={() => {
-                                filteredSecondAccounts = accounts.filter((acc) => {
-                                  const name =
-                                    t('Lang') === 'en'
-                                      ? acc.name
-                                      : t('Lang') === 'fa'
-                                        ? acc.name_fa
-                                        : t('Lang') === 'ps'
-                                          ? acc.name_ps
-                                          : acc.name;
-                                  return name && name.toLowerCase().includes(second_entry_account_search.toLowerCase());
-                                });
-                              }} />
-                            <button class="btn btn-outline-primary" on:click={() => modalRef?.openModal()}>
-                              <i class="bi bi-plus"></i>
-                            </button>
-                          </div>
-                          <div class="mt-3 track-account-list">
-                            {#each filteredSecondAccounts as acc}
-                              <div class="list-group mt-1 track-account-group">
-                                <button
-                                  type="button"
-                                  class="list-group-item list-group-item-action track-account-row"
-                                  on:click={() => {
-                                    second_entry_account = acc.id;
-                                    track_ID = acc.id;
-                                    showTrackModal = false;
-                                  }}>
-                                  {#if t('Lang') === 'en' && acc.name}{acc.name}{/if}
-                                  {#if t('Lang') === 'fa' && acc.name_fa}{acc.name_fa}{/if}
-                                  {#if t('Lang') === 'ps' && acc.name_ps}{acc.name_ps}{/if}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      </div>
 
-                                  <span class="badge badge-{getAccountTypeColor(acc.account_type_id)} ms-2 float-end">
-                                    {#if allAccountTypes.find((at) => at.id === acc.account_type_id)?.name}
-                                      {t('Lang') === 'en'
-                                        ? allAccountTypes.find((at) => at.id === acc.account_type_id)?.name
-                                        : t('Lang') === 'fa'
-                                          ? allAccountTypes.find((at) => at.id === acc.account_type_id)?.name_fa
-                                          : t('Lang') === 'ps'
-                                            ? allAccountTypes.find((at) => at.id === acc.account_type_id)?.name_ps
-                                            : allAccountTypes.find((at) => at.id === acc.account_type_id)?.name}
-                                    {:else}
-                                      N/A
-                                    {/if}
-                                  </span>
-                                </button>
-                              </div>
-                            {/each}
-                            {#if filteredSecondAccounts.length === 0}
-                              <div class="track-empty">
-                                <i class="bi bi-person-x"></i><span>{t('No accounts found')}</span>
-                              </div>
-                            {/if}
-                          </div>
-                        </div>
-                      </div>
-                      <div class="modal-footer track-picker-footer">
-                        <button type="button" class="track-cancel-btn" on:click={() => (showTrackModal = false)}
-                          ><i class="bi bi-x-lg"></i>
-                          {t('Close')}</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+      <div class="purchase-field">
+        <span class="purchase-field-label">
+          <i class="bi bi-receipt" aria-hidden="true"></i>
+          {t('Bill #')}
+        </span>
+
+        <div class="purchase-readonly-field">
+          <span dir="ltr">{form.bill_number}</span>
+          <i class="bi bi-lock-fill" aria-hidden="true"></i>
+        </div>
+      </div>
+
+      <div class="purchase-field">
+        <span class="purchase-field-label">
+          <i class="bi bi-calendar3" aria-hidden="true"></i>
+          {t('Date')}
+        </span>
+
+        <div class="purchase-app-datepicker">
+          <AppDatePicker bind:value={date} required />
+        </div>
+      </div>
+
+      <div class="purchase-field">
+        <span class="purchase-field-label">
+          <i class="bi bi-currency-exchange" aria-hidden="true"></i>
+          {t('Currency')}
+        </span>
+
+        <FilterSelect
+          variant="outline"
+          label={t('Currency')}
+          icon="bi-currency-exchange"
+          value={form.currency}
+          options={currencies.map((cur) => ({
+            value: cur.code,
+            label: t(cur.code),
+          }))}
+          on:change={(event) => (form.currency = event.detail)} />
+      </div>
+    </div>
+  </section>
+
+  <PurchaseItemsTable
+    bind:items
+    warehouse_id={form.warehouse_id}
+    currency={form.currency} />
+
+  <div class="purchase-lower-grid">
+    <section class="purchase-section purchase-description-section">
+      <header class="purchase-section-header purchase-section-header--compact">
+        <div class="purchase-section-heading">
+          <span class="purchase-section-icon purchase-section-icon--neutral" aria-hidden="true">
+            <i class="bi bi-card-text"></i>
+          </span>
+
+          <div>
+            <h2>{t('Description')}</h2>
+            <p>{t('Description')}</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="purchase-description-body">
+        <textarea
+          bind:value={form.description}
+          rows="5"
+          placeholder={t('Description')}></textarea>
+
+        <span class="purchase-description-hint">
+          <i class="bi bi-info-circle" aria-hidden="true"></i>
+          {t('Description')}
+        </span>
+      </div>
+    </section>
+
+    <section class="purchase-section purchase-payment-section">
+      <header class="purchase-section-header purchase-section-header--compact">
+        <div class="purchase-section-heading">
+          <span class="purchase-section-icon purchase-section-icon--green" aria-hidden="true">
+            <i class="bi bi-cash-stack"></i>
+          </span>
+
+          <div>
+            <h2>{t('Add Payment')}</h2>
+            <p>{t('Amount')}, {t('Currency')} &amp; {t('Account')}</p>
+          </div>
+        </div>
+
+        {#if second_entry_account == treasury_ID}
+          <span class="purchase-payment-method-badge purchase-payment-method-badge--treasury">
+            <i class="bi bi-box" aria-hidden="true"></i>
+            {t('Treasury')}
+          </span>
+        {:else if second_entry_account == track_ID}
+          <span class="purchase-payment-method-badge purchase-payment-method-badge--track">
+            <i class="bi bi-person-check" aria-hidden="true"></i>
+            {t('Track')}
+          </span>
+        {/if}
+      </header>
+
+      <div class="purchase-payment-body">
+        <label class="purchase-payment-field">
+          <span>{t('Amount')}</span>
+
+          <div class="purchase-payment-amount">
+            <i class="bi bi-cash" aria-hidden="true"></i>
+
+            <input
+              id="paymentAmount"
+              type="number"
+              min="0"
+              step="any"
+              bind:value={paymentAmount}
+              placeholder="0.00"
+              on:focus={() => {
+                if (paymentAmount === null || paymentAmount === 0) {
+                  paymentAmount = '';
+                }
+              }}
+              on:input={() => {
+                if (paymentAmount === '') {
+                  paymentAmount = null;
+                } else if (paymentAmount < 0) {
+                  paymentAmount = 0;
+                } else if (paymentAmount > getMaxPaymentAmount()) {
+                  paymentAmount = getMaxPaymentAmount();
+                } else {
+                  paymentAmount = Number(paymentAmount);
+                }
+
+                if (second_entry_account == treasury_ID) {
+                  const treasury_balance_for_currency =
+                    treasury_balance[paymentCurrency] || 0;
+
+                  if (paymentAmount > treasury_balance_for_currency * -1) {
+                    paymentAmount = Number(
+                      treasury_balance_for_currency * -1,
+                    ).toFixed(2);
+                  }
+                }
+              }} />
+
+            <div class="payment-currency-picker">
+              <button
+                id="paymentCurrencyDropdown"
+                type="button"
+                class="payment-currency-picker__btn"
+                aria-expanded={showPaymentCurrencyMenu}
+                aria-haspopup="listbox"
+                aria-label={t('Currency')}
+                on:click|stopPropagation={() =>
+                  (showPaymentCurrencyMenu = !showPaymentCurrencyMenu)}>
+                {paymentCurrency
+                  ? t(paymentCurrency)
+                  : t(form.currency || 'AFN')}
+                <i class="bi bi-chevron-down" aria-hidden="true"></i>
+              </button>
+
+              {#if showPaymentCurrencyMenu}
+                <ul class="payment-currency-menu" role="listbox">
+                  {#each currencies as cur (cur.code)}
+                    <li
+                      role="option"
+                      aria-selected={paymentCurrency === cur.code}>
+                      <button
+                        type="button"
+                        class="payment-currency-menu__item"
+                        class:selected={paymentCurrency === cur.code}
+                        on:click|stopPropagation={() =>
+                          selectPaymentCurrency(cur.code)}>
+                        {t(cur.code)}
+                      </button>
+                    </li>
+                  {/each}
+                </ul>
               {/if}
-
-
             </div>
           </div>
+        </label>
+
+        <label class="purchase-payment-field">
+          <span>{t('Description')}</span>
+
+          <div class="purchase-payment-description">
+            <i class="bi bi-card-text" aria-hidden="true"></i>
+            <input
+              type="text"
+              bind:value={paymentDescription}
+              placeholder={t('Description')} />
+          </div>
+        </label>
+
+        <div class="purchase-payment-methods">
+          <button
+            type="button"
+            class="purchase-payment-method"
+            class:is-active={second_entry_account == track_ID}
+            on:click={() => {
+              filteredSecondAccounts = accounts;
+              showTrackModal = true;
+            }}>
+            <span class="purchase-payment-method__icon purchase-payment-method__icon--track">
+              <i class="bi bi-person-check" aria-hidden="true"></i>
+            </span>
+
+            <span class="purchase-payment-method__copy">
+              <strong>{t('Track')}</strong>
+              <small>
+                {#if second_entry_account == track_ID}
+                  {t('Lang') === 'en'
+                    ? accounts.find((a) => a.id === track_ID)?.name
+                    : t('Lang') === 'fa'
+                      ? accounts.find((a) => a.id === track_ID)?.name_fa
+                      : t('Lang') === 'ps'
+                        ? accounts.find((a) => a.id === track_ID)?.name_ps
+                        : accounts.find((a) => a.id === track_ID)?.name}
+                {:else}
+                  {t('Account')}
+                {/if}
+              </small>
+            </span>
+
+            <span class="purchase-payment-method__check">
+              <i
+                class="bi bi-{second_entry_account == track_ID
+                  ? 'check-circle-fill'
+                  : 'circle'}"
+                aria-hidden="true"></i>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="purchase-payment-method"
+            class:is-active={second_entry_account == treasury_ID}
+            on:click={() => (second_entry_account = treasury_ID)}>
+            <span class="purchase-payment-method__icon purchase-payment-method__icon--treasury">
+              <i class="bi bi-box" aria-hidden="true"></i>
+            </span>
+
+            <span class="purchase-payment-method__copy">
+              <strong>{t('Treasury')}</strong>
+              <small>
+                {#if second_entry_account == treasury_ID}
+                  <span dir="ltr">
+                    {Number(
+                      treasury_balance[paymentCurrency] || 0,
+                    ).toLocaleString(undefined, {
+                      maximumFractionDigits: 3,
+                    })}
+                  </span>
+                  {t(paymentCurrency)}
+                {:else}
+                  {t('Treasury')}
+                {/if}
+              </small>
+            </span>
+
+            <span class="purchase-payment-method__check">
+              <i
+                class="bi bi-{second_entry_account == treasury_ID
+                  ? 'check-circle-fill'
+                  : 'circle'}"
+                aria-hidden="true"></i>
+            </span>
+          </button>
         </div>
+
+        {#if second_entry_account == treasury_ID}
+          <div class="purchase-treasury-status">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            <span>
+              {t('Treasury')}:
+              <strong dir="ltr">
+                {Number(
+                  treasury_balance[paymentCurrency] || 0,
+                ).toLocaleString(undefined, {
+                  maximumFractionDigits: 3,
+                })}
+              </strong>
+              {t(paymentCurrency)}
+            </span>
+          </div>
+        {/if}
       </div>
-    </div>
+    </section>
   </div>
-  <div class="card shadow-2 mt-4 purchase-form-card purchase-form-actions-card">
-    <div class="card-body d-flex justify-content-end align-items-center">
-      <div>
-        <button class="btn btn-secondary draft-action-btn me-2" on:click={() => savePurchase(false)} disabled={loading}
-          ><i class="bi bi-file-earmark-text"></i>{t('Save Draft')}</button>
-        <button class="btn btn-success confirm-action-btn" on:click={() => savePurchase(true)} disabled={loading}
-          >{t('Confirm Purchase')}</button>
-      </div>
+
+  <footer class="purchase-actions">
+    <div class="purchase-actions__status">
+      <span class="purchase-actions__status-icon">
+        <i class="bi bi-shield-check" aria-hidden="true"></i>
+      </span>
+
+      <span>
+        <strong>{t('Purchase')}</strong>
+        <small>
+          {items.length} {t('Items')} · {t(form.currency || 'AFN')}
+        </small>
+      </span>
     </div>
-  </div>
+
+    <div class="purchase-actions__buttons">
+      <button
+        type="button"
+        class="purchase-action-button purchase-action-button--draft"
+        on:click={() => savePurchase(false)}
+        disabled={loading}>
+        {#if loading}
+          <span class="spinner-border spinner-border-sm" role="status"></span>
+        {:else}
+          <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+        {/if}
+
+        <span>{t('Save Draft')}</span>
+      </button>
+
+      <button
+        type="button"
+        class="purchase-action-button purchase-action-button--confirm"
+        on:click={() => savePurchase(true)}
+        disabled={loading}>
+        {#if loading}
+          <span class="spinner-border spinner-border-sm" role="status"></span>
+        {:else}
+          <i class="bi bi-check2-circle" aria-hidden="true"></i>
+        {/if}
+
+        <span>{t('Confirm Purchase')}</span>
+      </button>
+    </div>
+  </footer>
+
   <AccountModal
     bind:this={modalRef}
     accountTypes={allAccountTypes}
     on:saved={async (e) => {
       accounts = await db.accounts.where({ status: 1 }).toArray();
-      accounts = accounts.filter((a) => (a.account_status ? a.account_status == 'active' : a.status == 1));
+      accounts = accounts.filter((a) =>
+        a.account_status ? a.account_status == 'active' : a.status == 1,
+      );
       second_entry_account = e.detail.account.id;
       track_ID = e.detail.account.id;
       showTrackModal = false;
     }} />
 </div>
+
 <AccountModal
   bind:this={accountModalRef}
   {accountTypes}
@@ -1085,747 +1216,702 @@
       .and((a) => a.status === 1)
       .toArray();
 
-    suppliers = suppliers.filter((a) => (a.account_status ? a.account_status == 'active' : a.status == 1));
+    suppliers = suppliers.filter((a) =>
+      a.account_status ? a.account_status == 'active' : a.status == 1,
+    );
+
     const newAccount = e.detail.account;
+
     if (newAccount && newAccount.account_type_id == 3) {
       form.account_id = newAccount.id;
     }
   }} />
 
-{#if form?.account_id}
-  {#if showAccountModal}
-    <div class="modal show d-block" id="accountModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content purchase-form-modal">
-          <div class="modal-header">
-            <h5 class="modal-title">{t('Account')}</h5>
-            <button type="button" class="btn-close" on:click={() => (showAccountModal = false)}></button>
+{#if showTrackModal}
+  <div class="purchase-modal-backdrop" role="presentation"></div>
+
+  <div
+    class="purchase-track-layer"
+    id="trackModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="trackModalLabel">
+    <div class="purchase-track-dialog">
+      <div class="purchase-track-modal">
+        <header class="purchase-track-header">
+          <div class="purchase-track-heading">
+            <span aria-hidden="true">
+              <i class="bi bi-person-check"></i>
+            </span>
+
+            <div>
+              <small>{t('Account')}</small>
+              <h2 id="trackModalLabel">{t('Track')}</h2>
+            </div>
           </div>
-          <div class="modal-body overflow-y-auto" style="max-height:480px">
-            <AccountView id={form.account_id} />
+
+          <button
+            type="button"
+            class="purchase-track-close"
+            aria-label={t('Close')}
+            on:click={() => (showTrackModal = false)}>
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
+        </header>
+
+        <div class="purchase-track-body">
+          <div class="purchase-track-search">
+            <i class="bi bi-search" aria-hidden="true"></i>
+
+            <input
+              type="text"
+              bind:value={second_entry_account_search}
+              placeholder={t('Search accounts...')}
+              on:input={() => {
+                filteredSecondAccounts = accounts.filter((acc) => {
+                  const name =
+                    t('Lang') === 'en'
+                      ? acc.name
+                      : t('Lang') === 'fa'
+                        ? acc.name_fa
+                        : t('Lang') === 'ps'
+                          ? acc.name_ps
+                          : acc.name;
+
+                  return (
+                    name &&
+                    name
+                      .toLowerCase()
+                      .includes(second_entry_account_search.toLowerCase())
+                  );
+                });
+              }} />
+
+            <button
+              type="button"
+              title={t('Add Account')}
+              aria-label={t('Add Account')}
+              on:click={() => modalRef?.openModal()}>
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
           </div>
+
+          <div class="purchase-track-list">
+            {#each filteredSecondAccounts as acc (acc.id)}
+              <button
+                type="button"
+                class="purchase-track-account"
+                on:click={() => {
+                  second_entry_account = acc.id;
+                  track_ID = acc.id;
+                  showTrackModal = false;
+                }}>
+                <span class="purchase-track-account__icon">
+                  <i class="bi bi-person" aria-hidden="true"></i>
+                </span>
+
+                <span class="purchase-track-account__copy">
+                  <strong>
+                    {#if t('Lang') === 'en' && acc.name}{acc.name}{/if}
+                    {#if t('Lang') === 'fa' && acc.name_fa}{acc.name_fa}{/if}
+                    {#if t('Lang') === 'ps' && acc.name_ps}{acc.name_ps}{/if}
+                  </strong>
+
+                  <small>
+                    {#if allAccountTypes.find((at) => at.id === acc.account_type_id)?.name}
+                      {t('Lang') === 'en'
+                        ? allAccountTypes.find((at) => at.id === acc.account_type_id)?.name
+                        : t('Lang') === 'fa'
+                          ? allAccountTypes.find((at) => at.id === acc.account_type_id)?.name_fa
+                          : t('Lang') === 'ps'
+                            ? allAccountTypes.find((at) => at.id === acc.account_type_id)?.name_ps
+                            : allAccountTypes.find((at) => at.id === acc.account_type_id)?.name}
+                    {:else}
+                      N/A
+                    {/if}
+                  </small>
+                </span>
+
+                <i class="bi bi-chevron-right purchase-track-account__arrow" aria-hidden="true"></i>
+              </button>
+            {/each}
+
+            {#if filteredSecondAccounts.length === 0}
+              <div class="purchase-track-empty">
+                <span aria-hidden="true">
+                  <i class="bi bi-person-x"></i>
+                </span>
+
+                <strong>{t('No accounts found')}</strong>
+              </div>
+            {/if}
+          </div>
+        </div>
+
+        <footer class="purchase-track-footer">
+          <button type="button" on:click={() => (showTrackModal = false)}>
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+            <span>{t('Close')}</span>
+          </button>
+        </footer>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if form?.account_id && showAccountModal}
+  <div class="purchase-modal-backdrop" role="presentation"></div>
+
+  <div
+    class="purchase-account-view-layer"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="purchaseAccountViewTitle">
+    <div class="purchase-account-view-dialog">
+      <div class="purchase-account-view-modal">
+        <header>
+          <div>
+            <span aria-hidden="true">
+              <i class="bi bi-person-vcard"></i>
+            </span>
+            <h2 id="purchaseAccountViewTitle">{t('Account')}</h2>
+          </div>
+
+          <button
+            type="button"
+            aria-label={t('Close')}
+            on:click={() => (showAccountModal = false)}>
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
+        </header>
+
+        <div class="purchase-account-view-body">
+          <AccountView id={form.account_id} />
         </div>
       </div>
     </div>
-  {/if}
+  </div>
 {/if}
 
 <style>
-  .purchase-form-page {
-    background: transparent;
-    padding-bottom: 1.25rem;
-    color: #0f172a;
-  }
+  .purchase-create-page {
+    --purchase-primary: var(--bs-primary, #2f6fed);
+    --purchase-primary-dark: #1d4ed8;
+    --purchase-green: #059669;
+    --purchase-text: #172033;
+    --purchase-muted: #718096;
+    --purchase-border: #dfe6ef;
+    --purchase-border-soft: #edf1f6;
+    --purchase-surface: #ffffff;
+    --purchase-bg-soft: #f7f9fc;
+    --purchase-control-height: 2.625rem;
 
-  .purchase-form-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06) !important;
-    overflow: hidden;
-    background: #ffffff;
-  }
-
-  .purchase-form-card--payment,
-  .purchase-form-card--payment :global(.card-body) {
-    overflow: visible;
-  }
-
-  .purchase-main-container {
-    overflow: visible;
-    padding: 0.75rem;
-    border: 1px solid #e5eaf2;
-    border-radius: 14px;
-    background: #ffffff;
-    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
-  }
-
-  .purchase-main-container > .purchase-form-card {
-    border: 0;
-    border-radius: 0;
-    box-shadow: none !important;
-  }
-
-  .purchase-main-container > .purchase-form-card :global(.card-body) {
-    padding-bottom: 0.75rem !important;
-  }
-
-  .purchase-main-container :global(.purchase-items-card) {
-    margin-top: 0 !important;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none !important;
-  }
-
-  .purchase-form-title {
-    color: #0f172a;
-    font-weight: 800;
-    font-size: 1.25rem;
-    letter-spacing: -0.02em;
-    padding-bottom: 0.75rem;
-    margin-bottom: 1rem !important;
-    border-bottom: 1px solid #f1f5f9;
-  }
-
-  .purchase-balance-btn {
-    text-decoration: none;
-    font-weight: 700;
-    font-size: 0.82rem !important;
-    color: #0f6efd !important;
-    background: #eff6ff;
-    border-radius: 999px;
-    padding: 0.35rem 0.75rem !important;
-  }
-
-  .purchase-balance-btn:hover {
-    background: #dbeafe;
-  }
-
-  .purchase-form-fields :global(.form-control),
-  .purchase-form-fields :global(.form-select),
-  .purchase-form-page :global(.form-control),
-  .purchase-form-page :global(.form-select) {
-    border-color: #e2e8f0;
-    border-radius: 10px;
-    background: #ffffff;
-    font-size: 0.84rem;
-    font-weight: 600;
-    color: #334155;
-    min-height: 38px;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-  }
-
-  .purchase-form-fields :global(.form-control:focus),
-  .purchase-form-fields :global(.form-select:focus),
-  .purchase-form-page :global(.form-control:focus),
-  .purchase-form-page :global(.form-select:focus) {
-    border-color: #93c5fd;
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
-  }
-
-  .purchase-form-fields :global(.input-group) {
-    border-radius: 10px;
-    overflow: hidden;
-  }
-
-  .purchase-unified-input-group.persianDatePicker {
-    flex-direction: row !important;
-    align-items: stretch !important;
-  }
-
-  .purchase-unified-input-group.persianDatePicker :global(.persian-date-text) {
-    flex: 1 1 50%;
-    min-width: 0;
-    width: auto;
-    border-inline-start: 1px solid #e2e8f0 !important;
-    border-bottom: 0;
-    justify-content: center;
-    text-align: center;
-    background: var(--erp-bg) !important;
-    height: var(--erp-date-row-height);
-    min-height: var(--erp-date-row-height);
-    max-height: var(--erp-date-row-height);
-    font-size: 0.875rem;
-    font-weight: 600;
-    line-height: 1.5;
-  }
-
-  .purchase-unified-input-group.persianDatePicker :global(.input-group-text.badge-warning) {
-    flex: 0 0 auto;
-    width: auto;
-    border-inline-start: 0 !important;
-    border-bottom: 0;
-    border-inline-end: 1px solid #e2e8f0;
-    justify-content: center;
-    height: var(--erp-date-row-height);
-    min-height: var(--erp-date-row-height);
-    max-height: var(--erp-date-row-height);
-  }
-
-  .purchase-unified-input-group.persianDatePicker :global(.form-control) {
-    flex: 1 1 50%;
-    min-width: 0;
-    width: auto;
-    border-top: 0;
-    height: var(--erp-date-row-height);
-    min-height: var(--erp-date-row-height);
-    max-height: var(--erp-date-row-height);
-    font-size: 0.875rem;
-    line-height: 1.5;
-  }
-
-  .purchase-unified-input-group {
     display: flex;
-    align-items: stretch;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #ffffff;
-  }
-
-  .purchase-payment-amount-row {
-    display: flex;
-    align-items: stretch;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    overflow: visible;
-    background: #ffffff;
-  }
-
-  .purchase-payment-amount-row:focus-within {
-    border-color: #93c5fd;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
-  }
-
-  .purchase-unified-input-group--inline {
-    flex: 1;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
-    border: 0;
-    border-radius: 0;
-    overflow: hidden;
-  }
-
-  .payment-currency-picker {
-    position: relative;
-    flex-shrink: 0;
-    border-inline-start: 1px solid #e2e8f0;
-  }
-
-  .payment-currency-picker__btn {
-    height: 100%;
-    min-height: 31px;
-    border: 0;
-    background: #ffffff;
-    padding: 0 0.75rem;
-    font-weight: 700;
-    font-size: 0.82rem;
-    color: #475569;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    white-space: nowrap;
-    cursor: pointer;
-  }
-
-  .payment-currency-picker__btn:hover {
-    background: #f8fafc;
-  }
-
-  .payment-currency-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    inset-inline-end: 0;
-    z-index: 1050;
-    min-width: 130px;
     margin: 0;
-    padding: 0.35rem 0;
-    list-style: none;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+    padding: 0 0 1.25rem;
+    color: var(--purchase-text);
   }
 
-  .payment-currency-menu__item {
-    display: block;
-    width: 100%;
-    border: 0;
-    background: transparent;
-    padding: 0.45rem 0.85rem;
-    text-align: start;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #334155;
-    cursor: pointer;
-  }
+  /* Page header */
 
-  .payment-currency-menu__item:hover,
-  .payment-currency-menu__item.selected {
-    background: #eff6ff;
-    color: #0f6efd;
-  }
-
-  .purchase-unified-input-group:focus-within {
-    border-color: #93c5fd;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
-  }
-
-  .purchase-unified-input-group :global(.form-control) {
-    border: 0 !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    flex: 1 1 auto;
-    min-width: 0;
-    background: #ffffff !important;
-  }
-
-  .purchase-unified-input-group :global(.form-control:focus) {
-    border: 0 !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-  }
-
-  .purchase-unified-input-group :global(.input-group-text) {
-    border: 0 !important;
-    border-radius: 0 !important;
-    background: #ffffff;
-  }
-
-  .purchase-unified-input-group :global(.input-group-text:not(:first-child)) {
-    border-inline-start: 1px solid #e2e8f0 !important;
-  }
-
-  .purchase-unified-input-group :global(.input-group-text:first-child:not(:last-child)) {
-    border-inline-end: 1px solid #e2e8f0 !important;
-  }
-
-  .purchase-unified-input-group :global(.input-group-text.bg-primary) {
-    border-inline-end: 1px solid #0f6efd !important;
-  }
-
-  .purchase-unified-input-group :global(.purchase-input-addon-btn),
-  .purchase-unified-input-group :global(.btn-info),
-  .purchase-unified-input-group :global(.btn-danger),
-  .purchase-unified-input-group :global(.btn-primary),
-  .purchase-unified-input-group :global(.btn-light),
-  .purchase-unified-input-group :global(.btn-success),
-  .purchase-unified-input-group :global(.btn-secondary.dropdown-toggle) {
-    border: 0 !important;
-    border-inline-start: 1px solid #e2e8f0 !important;
-    border-radius: 0 !important;
-    padding: 0 0.65rem;
-    display: inline-flex;
+  .purchase-page-header {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    align-self: stretch;
-    box-shadow: none !important;
-  }
-
-  .purchase-unified-input-group :global(.btn-info) {
-    background: #eff6ff !important;
-    color: #0f6efd;
-  }
-
-  .purchase-unified-input-group :global(.btn-danger.purchase-input-addon-btn) {
-    background: #fef2f2 !important;
-    color: #dc2626 !important;
-  }
-
-  .purchase-unified-input-group :global(.btn-primary.purchase-input-addon-btn) {
-    background: linear-gradient(180deg, #3b82f6 0%, #0f6efd 100%) !important;
-    color: #ffffff !important;
-    border-inline-start: 1px solid #0f6efd !important;
-  }
-
-  .purchase-unified-input-group :global(.purchase-input-addon-btn:first-child),
-  .purchase-unified-input-group :global(.btn-info.purchase-input-addon-btn:first-child) {
-    border-inline-start: 0 !important;
-  }
-
-  .purchase-unified-input-group--account {
-    overflow: hidden;
-  }
-
-  .purchase-unified-input-group--account :global(.purchase-account-search-input),
-  .purchase-unified-input-group--account .purchase-account-selected-name {
-    text-align: start;
-    flex: 1 1 auto;
-    width: 100%;
+    justify-content: space-between;
+    gap: 1rem;
     min-width: 0;
-    border: 0 !important;
-    border-inline-end: 1px solid #dbe7f3 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--purchase-border);
+    border-radius: 0.875rem;
+    background: var(--purchase-surface);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.045);
   }
 
-  .purchase-unified-input-group--account :global(.purchase-account-quick-btn) {
-    display: inline-flex !important;
-    flex-direction: row;
-    flex-wrap: nowrap;
+  .purchase-page-heading {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    flex: 0 0 auto;
-    width: auto !important;
-    min-width: auto !important;
-    padding: 0 0.65rem !important;
-    border: none !important;
-    border-radius: 0 !important;
-    background: #0f6efd !important;
-    color: #ffffff !important;
-    font-size: 0.72rem !important;
-    font-weight: 700 !important;
+    gap: 0.8rem;
+    min-width: 0;
+  }
+
+  .purchase-page-icon {
+    display: inline-grid;
+    flex: 0 0 2.75rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    border-radius: 0.75rem;
+    background: #edf4ff;
+    color: var(--purchase-primary);
+    font-size: 1.1rem;
+  }
+
+  .purchase-page-heading__copy {
+    min-width: 0;
+  }
+
+  .purchase-page-eyebrow {
+    margin-bottom: 0.05rem;
+    color: var(--purchase-primary);
+    font-size: 0.65rem;
+    font-weight: 850;
     line-height: 1;
-    white-space: nowrap;
-    box-shadow: none !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
-  .purchase-unified-input-group--account :global(.purchase-account-quick-btn:hover),
-  .purchase-unified-input-group--account :global(.purchase-account-quick-btn:focus) {
-    background: #1d4ed8 !important;
-    color: #ffffff !important;
+  .purchase-page-heading h1 {
+    margin: 0;
+    color: var(--purchase-text);
+    font-size: 1.15rem;
+    font-weight: 900;
+    line-height: 1.3;
+    letter-spacing: -0.025em;
   }
 
-  .purchase-unified-input-group--account :global(.purchase-account-quick-btn i),
-  .purchase-account-quick-btn__text {
-    display: inline-block;
-    flex-shrink: 0;
-    white-space: nowrap;
-    line-height: 1;
-    border: none;
-  }
-
-  .purchase-account-selected-name {
-    display: block;
-    padding: 0.375rem 0.75rem;
-    font-weight: 700;
-    font-size: 0.84rem;
-    color: #334155;
-    cursor: pointer;
-    min-height: 31px;
-    line-height: 1.5;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .purchase-account-selected-name:hover {
-    background: #f8fafc !important;
-  }
-
-  .purchase-unified-input-group :global(.btn-secondary.dropdown-toggle) {
-    background: #ffffff !important;
-    color: #475569;
-    font-weight: 700;
-  }
-
-  .purchase-form-fields :global(.input-group-text:not(.persian-date-text)) {
-    border-color: #e2e8f0;
-    background: #f1f5f9;
-    font-weight: 700;
-    font-size: 0.78rem;
-    color: #64748b;
-  }
-
-  .purchase-form-fields :global(.input-group-text.bg-primary) {
-    background: linear-gradient(180deg, #3b82f6 0%, #0f6efd 100%) !important;
-    border-color: #0f6efd;
-  }
-
-  .purchase-form-fields :global(.btn-info) {
-    background: #eff6ff;
-    border-color: #bfdbfe;
-    color: #0f6efd;
-  }
-
-  .purchase-form-fields :global(.btn-secondary.dropdown-toggle) {
-    border-radius: 10px;
-    font-weight: 700;
-    background: #ffffff !important;
-    background-color: #ffffff !important;
-    border-color: #e2e8f0;
-    color: #475569;
-  }
-
-  .purchase-form-page :global(textarea.form-control) {
-    min-height: 72px;
-    resize: vertical;
-    background: #ffffff;
-  }
-
-  .purchase-form-page :global(input.form-control),
-  .purchase-form-page :global(select.form-select),
-  .purchase-form-page :global(textarea.form-control),
-  .purchase-form-fields :global(input.form-control),
-  .purchase-form-fields :global(select.form-select),
-  .purchase-form-page :global(.form-outline .form-control),
-  .purchase-form-page :global(.form-outline input),
-  .purchase-form-page :global(.input-group > .form-control),
-  .purchase-form-page :global(.input-group .form-outline .form-control) {
-    background-color: #ffffff !important;
-    background: #ffffff !important;
-  }
-
-  .purchase-form-page :global(.input-group .btn-secondary.dropdown-toggle) {
-    background-color: #ffffff !important;
-    background: #ffffff !important;
-    border-color: #e2e8f0;
-    color: #475569;
-    font-weight: 700;
-  }
-
-  .purchase-form-page :global(.input-group .form-control::placeholder) {
-    color: #94a3b8;
-  }
-
-  .purchase-form-page :global(.input-group .btn-light) {
-    background-color: #ffffff !important;
-    background: #ffffff !important;
-    border-color: #e2e8f0;
-    color: #475569;
-    font-weight: 600;
-  }
-
-  .purchase-form-page :global(.form-outline .form-control:focus),
-  .purchase-form-page :global(.form-outline input:focus) {
-    background-color: #ffffff !important;
-    background: #ffffff !important;
-  }
-
-  .purchase-form-dropdown {
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
-  }
-
-  .purchase-form-dropdown :global(.list-group-item) {
-    border: 0;
-    font-weight: 600;
-    font-size: 0.82rem;
-  }
-
-  .purchase-form-dropdown :global(.list-group-item:hover) {
-    background: #eff6ff;
-    color: #0f6efd;
-  }
-
-  .purchase-payment-title {
-    color: #0f172a;
-    font-size: 0.95rem;
-    font-weight: 800;
-    letter-spacing: -0.01em;
+  .purchase-page-meta {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-  }
-
-  .purchase-payment-title::before {
-    content: '';
-    width: 4px;
-    height: 18px;
-    border-radius: 999px;
-    background: linear-gradient(180deg, #3b82f6, #0f6efd);
-  }
-
-  .purchase-form-page :global(.btn-danger),
-  .purchase-form-page :global(.btn-light),
-  .purchase-form-page :global(.btn-success.btn-sm) {
-    border-radius: 10px;
-    font-weight: 700;
-  }
-
-  .purchase-form-page :global(.btn-success.btn-sm) {
-    background: #ecfdf5;
-    border: 1px solid #a7f3d0;
-    color: #047857;
-  }
-
-  .purchase-form-page :global(.btn-danger.btn-sm) {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #dc2626;
-  }
-
-  .purchase-form-modal {
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-    overflow: hidden;
-    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
-  }
-
-  .purchase-form-modal :global(.modal-header) {
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-  }
-
-  .purchase-form-modal :global(.modal-title) {
-    font-weight: 800;
-    color: #0f172a;
-  }
-
-  .purchase-form-actions-card :global(.btn-secondary) {
-    border-radius: 10px;
-    font-weight: 700;
-    min-width: 130px;
-    background: #fff;
-    border-color: #e2e8f0;
-    color: #475569;
-  }
-
-  .purchase-form-actions-card :global(.btn-success) {
-    border-radius: 10px;
-    font-weight: 700;
-    min-width: 150px;
-    background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
-    border: none;
-    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.28);
-  }
-
-  .purchase-form-actions-card :global(.btn-success:hover) {
-    background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
-  }
-
-  .purchase-form-actions-card :global(.draft-action-btn),
-  .purchase-form-actions-card :global(.draft-action-btn:hover),
-  .purchase-form-actions-card :global(.draft-action-btn:focus) {
-    color: #fff;
-    background: #f59e0b;
-    border-color: #f59e0b;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
-  }
-
-  .purchase-form-actions-card :global(.draft-action-btn:hover) {
-    background: #d97706;
-    border-color: #d97706;
-  }
-
-  .purchase-treasury-note {
-    font-size: 0.78rem;
+    margin-top: 0.25rem;
+    color: #7c899c;
+    font-size: 0.68rem;
     font-weight: 600;
-    color: #64748b;
-    background: #ffffff;
-    border: 1px solid #eef2f7;
-    border-radius: 8px;
-    padding: 0.35rem 0.5rem;
   }
 
-  .purchase-balance-row {
+  .purchase-page-meta > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .purchase-page-meta strong {
+    color: #526176;
+    font-weight: 800;
+  }
+
+  .purchase-page-meta__separator {
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: #cbd5e1;
+  }
+
+  .purchase-page-header__actions {
     display: flex;
-    justify-content: flex-end;
-    margin-bottom: 0.75rem;
+    flex-shrink: 0;
   }
 
-  .purchase-unified-input-group :global(.purchase-treasury-btn.btn-success) {
-    margin: 0.2rem;
-    padding-inline: 0.75rem;
-    border: 1px solid #a7f3d0 !important;
+  .purchase-supplier-balance {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 11rem;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid #d9e6fb;
+    border-radius: 0.7rem;
+    background: #f5f9ff;
+    color: #334155;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .purchase-supplier-balance:hover {
+    border-color: #bed3f8;
+    background: #edf4ff;
+  }
+
+  .purchase-supplier-balance__icon {
+    display: inline-grid;
+    flex: 0 0 2rem;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    color: var(--purchase-primary);
+  }
+
+  .purchase-supplier-balance__copy {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.04rem;
+  }
+
+  .purchase-supplier-balance__copy small {
+    color: #718096;
+    font-size: 0.58rem;
+    font-weight: 700;
+  }
+
+  .purchase-supplier-balance__copy strong {
+    overflow: hidden;
+    color: #26364b;
+    font-size: 0.72rem;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .purchase-supplier-balance__arrow {
+    color: #95a3b6;
+    font-size: 0.65rem;
+  }
+
+  /* Shared sections */
+
+  .purchase-section {
+    min-width: 0;
+    overflow: visible;
+    border: 1px solid var(--purchase-border);
+    border-radius: 0.875rem;
+    background: var(--purchase-surface);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.045);
+  }
+
+  .purchase-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 4rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--purchase-border-soft);
+  }
+
+  .purchase-section-header--compact {
+    min-height: 3.75rem;
+  }
+
+  .purchase-section-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+  }
+
+  .purchase-section-icon {
+    display: inline-grid;
+    flex: 0 0 2.2rem;
+    width: 2.2rem;
+    height: 2.2rem;
+    place-items: center;
+    border-radius: 0.6rem;
+    background: #edf4ff;
+    color: var(--purchase-primary);
+    font-size: 0.9rem;
+  }
+
+  .purchase-section-icon--neutral {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+
+  .purchase-section-icon--green {
+    background: #ecfdf5;
+    color: var(--purchase-green);
+  }
+
+  .purchase-section-heading h2 {
+    margin: 0;
+    color: #26364b;
+    font-size: 0.88rem;
+    font-weight: 850;
+    line-height: 1.25;
+  }
+
+  .purchase-section-heading p {
+    margin: 0.1rem 0 0;
+    color: #8794a7;
+    font-size: 0.63rem;
+    font-weight: 550;
+  }
+
+  .purchase-required-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: #b42318;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.purchase-required-note i {
+  color: #dc2626;
+  font-size: 0.48rem;
+}
+
+  /* Details */
+
+  .purchase-details-grid {
+    display: grid;
+    grid-template-columns:
+      minmax(10rem, 1fr)
+      minmax(13rem, 1.35fr)
+      minmax(8rem, 0.72fr)
+      minmax(10rem, 0.9fr)
+      minmax(8rem, 0.72fr);
+    gap: 0.75rem;
+    padding: 0.875rem 1rem 1rem;
+  }
+
+  .purchase-field {
+    display: grid;
+    align-content: start;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  .purchase-field-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 1rem;
+    color: #59687c;
+    font-size: 0.68rem;
+    font-weight: 750;
+  }
+
+  .purchase-field-label i {
+    color: #8c9aad;
+    font-size: 0.72rem;
+  }
+
+  .purchase-details-grid :global(.filter-select) {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .purchase-details-grid :global(.filter-select__label),
+  .purchase-details-grid :global(.filter-label) {
+    display: none !important;
+  }
+
+  .purchase-details-grid :global(.filter-select__control),
+  .purchase-details-grid :global(.filter-select select),
+  .purchase-details-grid :global(.filter-select button),
+  .purchase-details-grid :global(.form-select) {
+    width: 100%;
+    min-height: var(--purchase-control-height) !important;
+    height: var(--purchase-control-height) !important;
+    border-color: #d6dfeb !important;
     border-radius: 0.625rem !important;
-    background: #ecfdf5 !important;
-    color: #059669 !important;
+    background: #ffffff !important;
+    color: #26364b !important;
+    font-size: 0.78rem !important;
+    font-weight: 650 !important;
     box-shadow: none !important;
   }
 
-  .purchase-unified-input-group :global(.purchase-treasury-btn.btn-success:hover),
-  .purchase-unified-input-group :global(.purchase-treasury-btn.btn-success:focus) {
-    border-color: #6ee7b7 !important;
-    background: #d1fae5 !important;
-    color: #047857 !important;
+  .purchase-details-grid :global(.filter-select__control:hover),
+  .purchase-details-grid :global(.filter-select select:hover),
+  .purchase-details-grid :global(.form-select:hover) {
+    border-color: #bcc9db !important;
   }
 
-  /* Match the compact 100%-zoom density used by the index pages. */
-  .purchase-form-page {
+  .purchase-details-grid :global(.filter-select__control:focus-within),
+  .purchase-details-grid :global(.filter-select select:focus),
+  .purchase-details-grid :global(.form-select:focus) {
+    border-color: #78a4f5 !important;
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.1) !important;
+  }
+
+  .purchase-supplier-input {
+    display: flex;
+    align-items: stretch;
     width: 100%;
-    max-width: var(--content-max-width);
-    margin: 0 auto !important;
-    padding: 0 0 var(--section-gap);
-    font-size: var(--app-font-sm);
+    height: var(--purchase-control-height);
+    overflow: hidden;
+    border: 1px solid #d6dfeb;
+    border-radius: 0.625rem;
+    background: #ffffff;
   }
-  .purchase-form-card {
-    border-radius: var(--card-radius);
-    box-shadow: var(--erp-shadow-sm) !important;
-  }
-  .purchase-form-page > .purchase-form-card:first-child,
-  .purchase-form-page > .purchase-form-card:first-child :global(.card-body){position:relative;z-index:30;overflow:visible!important}
-  .purchase-form-card :global(.card-body) { padding: var(--card-padding) !important; }
-  .purchase-form-title {
-    margin-bottom: var(--section-gap) !important;
-    padding-bottom: .5rem;
-    font-size: var(--app-heading-sm);
-  }
-  .purchase-form-fields {
-    --bs-gutter-x: var(--section-gap);
-    --bs-gutter-y: var(--section-gap);
-  }
-  .purchase-form-fields > [class*='col-'] {
-    min-width: 0;
-  }
-  @media (min-width: 1200px) {
-    .purchase-form-fields {
-      display: grid;
-      grid-template-columns:
-        minmax(0, 1.05fr)
-        minmax(0, 1.35fr)
-        minmax(0, .8fr)
-        minmax(0, 1.25fr)
-        minmax(0, .75fr);
-    }
-    .purchase-form-fields > [class*='col-'] {
-      width: auto;
-      max-width: none;
-      padding-inline: calc(var(--section-gap) / 2);
-    }
-  }
-  @media (min-width: 768px) and (max-width: 1199.98px) {
-    .purchase-form-fields {
-      display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-    .purchase-form-fields > [class*='col-'] {
-      width: auto;
-      max-width: none;
-      padding-inline: calc(var(--section-gap) / 2);
-    }
-    .purchase-form-fields > :nth-child(1),
-    .purchase-form-fields > :nth-child(2) { grid-column: span 3; }
-    .purchase-form-fields > :nth-child(3),
-    .purchase-form-fields > :nth-child(4),
-    .purchase-form-fields > :nth-child(5) { grid-column: span 2; }
-  }
-  .purchase-form-fields .persianDatePicker :global(.gregorian-date-text),.purchase-form-fields .persianDatePicker :global(.persian-date-text){overflow:hidden;padding-inline:.3rem;font-size:.68rem!important;text-overflow:ellipsis;white-space:nowrap}.purchase-form-fields .persianDatePicker :global(.date-picker-icon){flex-basis:30px;width:30px;min-width:30px}
-  .purchase-form-page :global(.form-control), .purchase-form-page :global(.form-select) {
-    min-height: var(--control-height);
-    height: var(--control-height);
-    border-radius: var(--control-radius);
-    font-size: var(--control-font);
-  }
-  .purchase-form-page :global(textarea.form-control) { height: auto; min-height: 3.5rem; }
-  .purchase-unified-input-group, .purchase-payment-amount-row { border-radius: .5rem; }
-  .purchase-unified-input-group.persianDatePicker :global(.form-control),
-  .purchase-unified-input-group.persianDatePicker :global(.persian-date-text),
-  .purchase-unified-input-group.persianDatePicker :global(.input-group-text.badge-warning) { height: 2.125rem; min-height: 2.125rem; max-height: 2.125rem; font-size: .75rem; }
-  .purchase-form-page :global(.mt-4) { margin-top: var(--section-gap) !important; }
-  .purchase-form-page :global(.mt-3) { margin-top: calc(var(--section-gap) * .8) !important; }
-  .purchase-form-page :global(table) { font-size: var(--table-font-size); }
-  .purchase-form-page :global(th), .purchase-form-page :global(td) {
-    padding-top: .4rem;
-    padding-bottom: .4rem;
-  }
-  .purchase-payment-title { margin-bottom: .6rem !important; font-size: .85rem; }
-  .purchase-treasury-note { margin-bottom: .5rem !important; padding: .25rem .4rem; font-size: .72rem; }
-  .purchase-form-actions-card { position: sticky; bottom: 0; z-index: 60; margin-bottom: .25rem; box-shadow: 0 -6px 18px rgba(15,23,42,.08) !important; }
-  .purchase-form-actions-card :global(.card-body) { min-height: 3.4rem; padding: .5rem .75rem !important; }
-  .purchase-form-actions-card :global(.btn-secondary), .purchase-form-actions-card :global(.btn-success) { min-width: 7rem; min-height: 2.25rem; padding: .4rem .75rem; border-radius: .5rem; font-size: .78rem; }
 
-  @media (max-width: 767.98px) {
-    .purchase-form-page {
-      padding-bottom: .65rem;
-      font-size: var(--app-font-size);
-    }
-    .purchase-form-fields > [class*='col-'] {
-      width: 100%;
-    }
-    .purchase-form-page :global(.form-control),
-    .purchase-form-page :global(.form-select),
-    .purchase-app-datepicker :global(input) {
-      min-height: var(--control-height) !important;
-      height: var(--control-height) !important;
-    }
-    .purchase-form-actions-card :global(.card-body) {
-      justify-content: stretch !important;
-    }
-    .purchase-form-actions-card :global(.card-body > div) {
-      display: grid;
-      width: 100%;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: .5rem;
-    }
-    .purchase-form-actions-card :global(.btn) {
-      width: 100%;
-      min-width: 0 !important;
-      margin: 0 !important;
-    }
+  .purchase-supplier-input:focus-within {
+    border-color: #78a4f5;
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.1);
+  }
+
+  .purchase-supplier-input__icon {
+    display: inline-grid;
+    flex: 0 0 2.25rem;
+    width: 2.25rem;
+    place-items: center;
+    color: #8c9aad;
+  }
+
+  .purchase-supplier-input > input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #26364b;
+    font-size: 0.78rem;
+    font-weight: 650;
+  }
+
+  .purchase-supplier-input > input::placeholder {
+    color: #9aa7b8;
+    font-weight: 500;
+  }
+
+  .purchase-selected-supplier {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    min-width: 0;
+    padding-inline: 0.1rem 0.65rem;
+    border: 0;
+    background: transparent;
+    color: #26364b;
+    font-size: 0.78rem;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .purchase-selected-supplier span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .purchase-selected-supplier i {
+    flex-shrink: 0;
+    color: #94a3b8;
+    font-size: 0.72rem;
+  }
+
+  .purchase-add-supplier {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    min-width: 4.2rem;
+    padding-inline: 0.65rem;
+    border: 0;
+    border-inline-start: 1px solid #dfe6ef;
+    background: var(--purchase-primary);
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .purchase-add-supplier:hover {
+    background: var(--purchase-primary-dark);
+  }
+
+  .purchase-supplier-dropdown {
+    z-index: 1200;
+    max-height: 18rem;
+    margin: 0;
+    padding: 0.3rem;
+    overflow-y: auto;
+    list-style: none;
+    border: 1px solid #dce4ef;
+    border-radius: 0.75rem;
+    background: #ffffff;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+  }
+
+  .purchase-supplier-dropdown li {
+    margin: 0;
+    padding: 0;
+  }
+
+  .purchase-supplier-option {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.4rem 0.5rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: #26364b;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .purchase-supplier-option:hover {
+    background: #f0f6ff;
+  }
+
+  .purchase-supplier-option__avatar {
+    display: inline-grid;
+    flex: 0 0 1.9rem;
+    width: 1.9rem;
+    height: 1.9rem;
+    place-items: center;
+    border-radius: 0.5rem;
+    background: #edf4ff;
+    color: var(--purchase-primary);
+  }
+
+  .purchase-supplier-option__copy {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.05rem;
+  }
+
+  .purchase-supplier-option__copy strong {
+    overflow: hidden;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .purchase-supplier-option__copy small {
+    overflow: hidden;
+    color: #8794a7;
+    font-size: 0.61rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .purchase-supplier-option__arrow {
+    flex-shrink: 0;
+    color: #a0acbc;
+    font-size: 0.58rem;
+  }
+
+  .purchase-readonly-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    height: var(--purchase-control-height);
+    padding-inline: 0.75rem;
+    border: 1px solid #dfe5ed;
+    border-radius: 0.625rem;
+    background: #f7f9fc;
+    color: #526176;
+    font-size: 0.78rem;
+    font-weight: 750;
+  }
+
+  .purchase-readonly-field i {
+    color: #9aa7b8;
+    font-size: 0.65rem;
   }
 
   .purchase-app-datepicker {
@@ -1834,74 +1920,896 @@
   }
 
   .purchase-app-datepicker :global(.app-date-field) {
-    gap: 0.2rem;
+    width: 100%;
+    gap: 0 !important;
   }
 
   .purchase-app-datepicker :global(.date-label) {
-    margin: 0;
-    color: #64748b;
-    font-size: 0.68rem;
-    line-height: 1.1;
+    display: none !important;
   }
 
-  .purchase-app-datepicker :global(input) {
+  .purchase-app-datepicker :global(input),
+  .purchase-app-datepicker :global(.date-picker-control) {
     width: 100%;
-    min-height: var(--control-height) !important;
-    height: var(--control-height) !important;
-    padding-inline: 0.55rem !important;
-    border-radius: var(--control-radius) !important;
-    font-size: var(--control-font) !important;
-  }
-
-  /* The details and items sections sit flush inside their shared container. */
-  .purchase-main-container > .purchase-form-card,
-  .purchase-main-container :global(.purchase-items-card),
-  .purchase-main-container :global(.purchase-items-card .table-responsive) {
-    border: 0 !important;
+    min-width: 0;
+    min-height: var(--purchase-control-height) !important;
+    height: var(--purchase-control-height) !important;
+    border-color: #d6dfeb !important;
+    border-radius: 0.625rem !important;
+    background: #ffffff !important;
+    font-size: 0.78rem !important;
+    font-weight: 650 !important;
     box-shadow: none !important;
   }
 
-  .purchase-form-fields :global(.form-control),
-  .purchase-form-fields :global(.form-select),
-  .purchase-form-fields :global(.filter-select),
-  .purchase-form-fields :global(.filter-select__control),
-  .purchase-form-fields .purchase-unified-input-group,
-  .purchase-form-fields .purchase-app-datepicker :global(input),
-  .purchase-form-fields .purchase-app-datepicker :global(.app-date-field) {
-    border-radius: 4px !important;
+  .purchase-app-datepicker :global(input:focus),
+  .purchase-app-datepicker :global(.date-picker-control:focus-within) {
+    border-color: #78a4f5 !important;
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.1) !important;
   }
 
-  .purchase-main-container {
+  /* Lower cards */
+
+  .purchase-lower-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(25rem, 1.15fr);
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .purchase-description-body,
+  .purchase-payment-body {
+    padding: 0.875rem 1rem 1rem;
+  }
+
+  .purchase-description-body {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .purchase-description-body textarea {
+    width: 100%;
+    min-height: 10rem;
+    padding: 0.75rem;
+    resize: vertical;
+    border: 1px solid #d6dfeb;
+    border-radius: 0.625rem;
+    outline: 0;
+    background: #ffffff;
+    color: #26364b;
+    font: inherit;
+    font-size: 0.78rem;
+    line-height: 1.55;
+  }
+
+  .purchase-description-body textarea:hover {
+    border-color: #bcc9db;
+  }
+
+  .purchase-description-body textarea:focus {
+    border-color: #78a4f5;
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.1);
+  }
+
+  .purchase-description-body textarea::placeholder {
+    color: #9aa7b8;
+  }
+
+  .purchase-description-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #8a97aa;
+    font-size: 0.62rem;
+    font-weight: 600;
+  }
+
+  /* Payment */
+
+  .purchase-payment-method-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 1.8rem;
+    padding-inline: 0.6rem;
+    border-radius: 999px;
+    font-size: 0.62rem;
+    font-weight: 800;
+  }
+
+  .purchase-payment-method-badge--treasury {
+    border: 1px solid #bfe9d4;
+    background: #effaf5;
+    color: #087a54;
+  }
+
+  .purchase-payment-method-badge--track {
+    border: 1px solid #d5e3fb;
+    background: #f3f7fe;
+    color: #2f6fed;
+  }
+
+  .purchase-payment-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .purchase-payment-field {
+    display: grid;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  .purchase-payment-field > span {
+    color: #59687c;
+    font-size: 0.68rem;
+    font-weight: 750;
+  }
+
+  .purchase-payment-amount,
+  .purchase-payment-description {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: var(--purchase-control-height);
+    overflow: visible;
+    border: 1px solid #d6dfeb;
+    border-radius: 0.625rem;
+    background: #ffffff;
+  }
+
+  .purchase-payment-amount:focus-within,
+  .purchase-payment-description:focus-within {
+    border-color: #78a4f5;
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.1);
+  }
+
+  .purchase-payment-amount > i,
+  .purchase-payment-description > i {
+    flex: 0 0 2.25rem;
+    width: 2.25rem;
+    color: #8c9aad;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .purchase-payment-amount > input,
+  .purchase-payment-description > input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
     padding: 0;
     border: 0;
+    outline: 0;
     background: transparent;
-    box-shadow: none;
+    color: #26364b;
+    font-size: 0.78rem;
+    font-weight: 650;
   }
 
-  .purchase-form-actions-card :global(.draft-action-btn) {
-    border: 1px solid #a7f3d0 !important;
-    border-radius: 0.625rem !important;
-    background: #ecfdf5 !important;
-    color: #059669 !important;
-    box-shadow: none;
+  .purchase-payment-amount > input::placeholder,
+  .purchase-payment-description > input::placeholder {
+    color: #9aa7b8;
+    font-weight: 500;
   }
 
-  .purchase-form-actions-card :global(.draft-action-btn:hover) {
-    background: #d1fae5 !important;
-    border-color: #6ee7b7 !important;
-    color: #047857 !important;
+  .payment-currency-picker {
+    position: relative;
+    align-self: stretch;
+    flex-shrink: 0;
+    border-inline-start: 1px solid #dfe6ef;
   }
 
-  .purchase-form-actions-card :global(.confirm-action-btn) {
-    color: #fff !important;
-    background: var(--bs-primary, #0f6efd) !important;
-    border-color: var(--bs-primary, #0f6efd) !important;
-    box-shadow: 0 4px 12px rgba(15, 110, 253, 0.22) !important;
+  .payment-currency-picker__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 100%;
+    min-width: 4.5rem;
+    padding-inline: 0.7rem;
+    border: 0;
+    background: #f7f9fc;
+    color: #526176;
+    font-size: 0.68rem;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
   }
 
-  .purchase-form-actions-card :global(.confirm-action-btn:hover) {
-    background: #0b5ed7 !important;
-    border-color: #0a58ca !important;
+  .payment-currency-picker__btn:hover {
+    background: #eef3f8;
   }
 
+  .payment-currency-menu {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    inset-inline-end: 0;
+    z-index: 1300;
+    min-width: 8rem;
+    margin: 0;
+    padding: 0.3rem;
+    list-style: none;
+    border: 1px solid #dce4ef;
+    border-radius: 0.65rem;
+    background: #ffffff;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.14);
+  }
+
+  .payment-currency-menu__item {
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 0;
+    border-radius: 0.4rem;
+    background: transparent;
+    color: #526176;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .payment-currency-menu__item:hover,
+  .payment-currency-menu__item.selected {
+    background: #edf4ff;
+    color: var(--purchase-primary);
+  }
+
+  .purchase-payment-methods {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .purchase-payment-method {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+    min-height: 4rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid #dfe6ef;
+    border-radius: 0.7rem;
+    background: #ffffff;
+    color: #334155;
+    text-align: start;
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .purchase-payment-method:hover {
+    transform: translateY(-1px);
+    border-color: #c9d7e8;
+    background: #fbfcfe;
+  }
+
+  .purchase-payment-method.is-active {
+    border-color: #99b9f4;
+    background: #f4f8ff;
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.07);
+  }
+
+  .purchase-payment-method__icon {
+    display: inline-grid;
+    flex: 0 0 2.35rem;
+    width: 2.35rem;
+    height: 2.35rem;
+    place-items: center;
+    border-radius: 0.6rem;
+    font-size: 0.88rem;
+  }
+
+  .purchase-payment-method__icon--track {
+    background: #edf4ff;
+    color: var(--purchase-primary);
+  }
+
+  .purchase-payment-method__icon--treasury {
+    background: #ecfdf5;
+    color: var(--purchase-green);
+  }
+
+  .purchase-payment-method__copy {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.06rem;
+  }
+
+  .purchase-payment-method__copy strong {
+    overflow: hidden;
+    color: #26364b;
+    font-size: 0.75rem;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .purchase-payment-method__copy small {
+    overflow: hidden;
+    color: #8491a4;
+    font-size: 0.61rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .purchase-payment-method__check {
+    flex-shrink: 0;
+    color: #a9b4c3;
+    font-size: 0.82rem;
+  }
+
+  .purchase-payment-method.is-active .purchase-payment-method__check {
+    color: var(--purchase-primary);
+  }
+
+  .purchase-treasury-status {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.25rem;
+    padding-inline: 0.65rem;
+    border: 1px solid #cdebdc;
+    border-radius: 0.55rem;
+    background: #f3fbf7;
+    color: #527565;
+    font-size: 0.65rem;
+    font-weight: 650;
+  }
+
+  .purchase-treasury-status i {
+    color: var(--purchase-green);
+  }
+
+  .purchase-treasury-status strong {
+    color: #176a4c;
+    font-weight: 850;
+  }
+
+  /* Sticky actions */
+
+  .purchase-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 4.5rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid #d9e1ec;
+    border-radius: 0.875rem;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow:
+      0 -8px 28px rgba(15, 23, 42, 0.07),
+      0 8px 24px rgba(15, 23, 42, 0.05);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .purchase-actions__status {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+  }
+
+  .purchase-actions__status-icon {
+    display: inline-grid;
+    flex: 0 0 2.2rem;
+    width: 2.2rem;
+    height: 2.2rem;
+    place-items: center;
+    border-radius: 0.55rem;
+    background: #f1f5f9;
+    color: #64748b;
+  }
+
+  .purchase-actions__status > span:last-child {
+    display: grid;
+    min-width: 0;
+    gap: 0.03rem;
+  }
+
+  .purchase-actions__status strong {
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 850;
+  }
+
+  .purchase-actions__status small {
+    overflow: hidden;
+    color: #8a97aa;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .purchase-actions__buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-shrink: 0;
+  }
+
+  .purchase-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.6rem;
+    padding-inline: 1rem;
+    border-radius: 0.625rem;
+    font-size: 0.74rem;
+    font-weight: 850;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      color 0.15s ease,
+      transform 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .purchase-action-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .purchase-action-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .purchase-action-button--draft {
+    border: 1px solid #d5deea;
+    background: #ffffff;
+    color: #526176;
+  }
+
+  .purchase-action-button--draft:hover:not(:disabled) {
+    border-color: #becbdb;
+    background: #f8fafc;
+    color: #26364b;
+  }
+
+  .purchase-action-button--confirm {
+    min-width: 9rem;
+    border: 1px solid var(--purchase-primary);
+    background: var(--purchase-primary);
+    color: #ffffff;
+    box-shadow: 0 5px 14px rgba(47, 111, 237, 0.22);
+  }
+
+  .purchase-action-button--confirm:hover:not(:disabled) {
+    border-color: var(--purchase-primary-dark);
+    background: var(--purchase-primary-dark);
+    box-shadow: 0 7px 18px rgba(47, 111, 237, 0.27);
+  }
+
+  /* Modals */
+
+  .purchase-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1400;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+  }
+
+  .purchase-track-layer,
+  .purchase-account-view-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 1410;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    overflow-y: auto;
+  }
+
+  .purchase-track-dialog {
+    width: min(94vw, 32rem);
+  }
+
+  .purchase-track-modal,
+  .purchase-account-view-modal {
+    overflow: hidden;
+    border: 1px solid #dce4ef;
+    border-radius: 0.875rem;
+    background: #ffffff;
+    box-shadow: 0 26px 70px rgba(15, 23, 42, 0.22);
+  }
+
+  .purchase-track-header,
+  .purchase-account-view-modal > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 4.25rem;
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid var(--purchase-border-soft);
+    background: #ffffff;
+  }
+
+  .purchase-track-heading,
+  .purchase-account-view-modal > header > div {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .purchase-track-heading > span,
+  .purchase-account-view-modal > header > div > span {
+    display: inline-grid;
+    width: 2.2rem;
+    height: 2.2rem;
+    place-items: center;
+    border-radius: 0.55rem;
+    background: #edf4ff;
+    color: var(--purchase-primary);
+  }
+
+  .purchase-track-heading small {
+    display: block;
+    color: #8794a7;
+    font-size: 0.58rem;
+    font-weight: 650;
+  }
+
+  .purchase-track-heading h2,
+  .purchase-account-view-modal > header h2 {
+    margin: 0;
+    color: #26364b;
+    font-size: 0.9rem;
+    font-weight: 850;
+  }
+
+  .purchase-track-close,
+  .purchase-account-view-modal > header > button {
+    display: inline-grid;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    place-items: center;
+    border: 1px solid #e0e6ee;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    color: #718096;
+    cursor: pointer;
+  }
+
+  .purchase-track-close:hover,
+  .purchase-account-view-modal > header > button:hover {
+    background: #f1f5f9;
+    color: #334155;
+  }
+
+  .purchase-track-body {
+    padding: 0.8rem;
+  }
+
+  .purchase-track-search {
+    display: flex;
+    align-items: center;
+    height: 2.625rem;
+    overflow: hidden;
+    border: 1px solid #d6dfeb;
+    border-radius: 0.625rem;
+    background: #ffffff;
+  }
+
+  .purchase-track-search:focus-within {
+    border-color: #78a4f5;
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.1);
+  }
+
+  .purchase-track-search > i {
+    flex: 0 0 2.25rem;
+    width: 2.25rem;
+    color: #8c9aad;
+    text-align: center;
+  }
+
+  .purchase-track-search input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #26364b;
+    font-size: 0.76rem;
+    font-weight: 650;
+  }
+
+  .purchase-track-search button {
+    display: inline-grid;
+    flex: 0 0 2.5rem;
+    width: 2.5rem;
+    height: 100%;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    border-inline-start: 1px solid #dfe6ef;
+    background: #edf4ff;
+    color: var(--purchase-primary);
+    cursor: pointer;
+  }
+
+  .purchase-track-list {
+    display: grid;
+    gap: 0.35rem;
+    max-height: 22rem;
+    margin-top: 0.75rem;
+    overflow-y: auto;
+  }
+
+  .purchase-track-account {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    min-height: 3.25rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid #e4e9f0;
+    border-radius: 0.6rem;
+    background: #ffffff;
+    color: #26364b;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .purchase-track-account:hover {
+    border-color: #cddbf0;
+    background: #f5f9ff;
+  }
+
+  .purchase-track-account__icon {
+    display: inline-grid;
+    flex: 0 0 2rem;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 0.5rem;
+    background: #edf4ff;
+    color: var(--purchase-primary);
+  }
+
+  .purchase-track-account__copy {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.05rem;
+  }
+
+  .purchase-track-account__copy strong {
+    overflow: hidden;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .purchase-track-account__copy small {
+    overflow: hidden;
+    color: #8794a7;
+    font-size: 0.61rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .purchase-track-account__arrow {
+    flex-shrink: 0;
+    color: #a2adbc;
+    font-size: 0.58rem;
+  }
+
+  .purchase-track-empty {
+    display: grid;
+    min-height: 10rem;
+    place-items: center;
+    align-content: center;
+    gap: 0.4rem;
+    color: #8794a7;
+  }
+
+  .purchase-track-empty span {
+    display: inline-grid;
+    width: 2.8rem;
+    height: 2.8rem;
+    place-items: center;
+    border-radius: 0.7rem;
+    background: #f1f5f9;
+    font-size: 1rem;
+  }
+
+  .purchase-track-empty strong {
+    font-size: 0.72rem;
+    font-weight: 750;
+  }
+
+  .purchase-track-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.65rem 0.8rem;
+    border-top: 1px solid var(--purchase-border-soft);
+    background: #fbfcfe;
+  }
+
+  .purchase-track-footer button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 2.2rem;
+    padding-inline: 0.75rem;
+    border: 1px solid #d8e0ea;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    color: #526176;
+    font-size: 0.68rem;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .purchase-account-view-dialog {
+    width: min(96vw, 72rem);
+  }
+
+  .purchase-account-view-modal {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 2rem);
+  }
+
+  .purchase-account-view-body {
+    min-height: 0;
+    padding: 0.75rem;
+    overflow-y: auto;
+  }
+
+  /* RTL */
+
+  :global(html[dir='rtl']) .purchase-supplier-balance__arrow,
+  :global(html[dir='rtl']) .purchase-supplier-option__arrow,
+  :global(html[dir='rtl']) .purchase-track-account__arrow {
+    transform: scaleX(-1);
+  }
+
+  /* Responsive */
+
+  @media (max-width: 1200px) {
+    .purchase-details-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .purchase-field--supplier {
+      grid-column: span 2;
+    }
+  }
+
+  @media (max-width: 991.98px) {
+    .purchase-page-header {
+      align-items: flex-start;
+    }
+
+    .purchase-details-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .purchase-field--supplier {
+      grid-column: span 1;
+    }
+
+    .purchase-lower-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .purchase-description-body textarea {
+      min-height: 7rem;
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    .purchase-create-page {
+      gap: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+
+    .purchase-page-header {
+      flex-direction: column;
+      padding: 0.8rem;
+    }
+
+    .purchase-page-header__actions,
+    .purchase-supplier-balance {
+      width: 100%;
+    }
+
+    .purchase-details-grid {
+      grid-template-columns: 1fr;
+      padding: 0.8rem;
+    }
+
+    .purchase-field--supplier {
+      grid-column: auto;
+    }
+
+    .purchase-section-header {
+      padding-inline: 0.8rem;
+    }
+
+    .purchase-payment-body {
+      grid-template-columns: 1fr;
+      padding: 0.8rem;
+    }
+
+    .purchase-payment-methods,
+    .purchase-treasury-status {
+      grid-column: auto;
+    }
+
+    .purchase-actions {
+      align-items: stretch;
+      flex-direction: column;
+      padding: 0.65rem;
+    }
+
+    .purchase-actions__status {
+      display: none;
+    }
+
+    .purchase-actions__buttons {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+    }
+
+    .purchase-action-button {
+      width: 100%;
+      min-width: 0;
+      padding-inline: 0.6rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .purchase-page-icon,
+    .purchase-section-icon {
+      display: none;
+    }
+
+    .purchase-page-meta {
+      flex-wrap: wrap;
+    }
+
+    .purchase-payment-methods {
+      grid-template-columns: 1fr;
+    }
+
+    .purchase-actions__buttons {
+      grid-template-columns: 1fr;
+    }
+
+    .purchase-track-layer,
+    .purchase-account-view-layer {
+      padding: 0.45rem;
+    }
+
+    .purchase-account-view-modal {
+      max-height: calc(100dvh - 0.9rem);
+    }
+  }
 </style>
