@@ -232,7 +232,7 @@
   showStats={showReturnStats}
   showFooter={!loading && filteredReturns.length > 0}
   dense={true}
-  contained={false}
+
   contentClass="returns-index-content"
   tablePadding={true}>
   <svelte:fragment slot="actions">

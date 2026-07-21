@@ -182,7 +182,10 @@
     sidebarOpen = false;
     lastSidebarLocation = loc;
   }
+
+  
 </script>
+
 
 <div class="d-flex">
   {#if sidebarOpen}

@@ -246,9 +246,7 @@
 
 <div class="card shadow-2 mt-4 purchase-items-card" bind:this={itemsTableRoot}>
   <div class="card-body">
-    <div class="d-flex align-items-center mb-3">
-      <h5 class="mb-0 purchase-items-title">{t('Purchase Items')}</h5>
-    </div>
+   
 
     <input type="text" class="position-absolute opacity-0" bind:value={barcodeInput} on:keydown={handleBarcode} />
 

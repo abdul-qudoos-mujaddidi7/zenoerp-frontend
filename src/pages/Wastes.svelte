@@ -188,7 +188,7 @@
     showStats={showSummaryCards}
     showFooter={!loading && filtered.length > 0}
     dense={true}
-    contained={false}
+  
     contentClass="wastes-index-content"
     tablePadding={true}>
     <svelte:fragment slot="actions">
