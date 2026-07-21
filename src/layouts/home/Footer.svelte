@@ -64,7 +64,6 @@
         <h5 class="footer-title mb-4">{text.about}</h5>
         <div class="d-flex align-items-center mb-3">
           <img src="/img/logo.png" alt="ZenoERP" height="40" class="me-2" />
-          <span class="fw-semibold">ZenoERP</span>
         </div>
         <p class="text-muted small mb-4">{text.aboutText}</p>
         <div class="d-flex gap-2 social-links flex-wrap">

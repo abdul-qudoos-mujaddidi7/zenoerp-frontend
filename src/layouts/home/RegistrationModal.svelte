@@ -174,7 +174,7 @@
   role="presentation"
   on:click={handleOverlayClick}
   on:keydown={handleKeydown}>
-  <div
+  <section
     class="zeno-registration-modal__panel animate__animated animate__fadeInUp faster"
     bind:this={modalPanel}
     role="dialog"
@@ -328,5 +328,5 @@
       <span>{text.loginPrefix}</span>
       <button type="button" on:click={onLogin}>{text.login}</button>
     </p>
-  </div>
+  </section>
 </div>

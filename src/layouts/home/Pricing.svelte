@@ -15,8 +15,8 @@
   const copy = {
     en: {
       kicker: 'Pricing',
-      title: 'Choose the setup that fits your business today',
-      subtitle: 'Start with the essentials and move up when your team needs more users, storage, or branches.',
+      title: 'Simple plans for every business size',
+      subtitle: 'Start small and upgrade as your team, branches, and operations grow.',
       popular: 'Most Popular',
       period: 'per month',
       free: 'Start free',

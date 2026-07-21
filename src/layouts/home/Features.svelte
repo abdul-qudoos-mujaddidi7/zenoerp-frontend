@@ -6,8 +6,8 @@
 
   const sectionCopy = {
     en: {
-      title: 'The work your team does every day, organized',
-      subtitle: 'A clear set of tools for selling, buying, stock control, accounts, and reports.',
+      title: 'Powerful ERP features for daily operations',
+      subtitle: 'Six core tools your team can understand quickly and use every day.',
     },
     fa: {
       title: 'ویژگی‌های قدرتمند ERP برای کارهای روزانه',
@@ -25,7 +25,7 @@
 <section id="features" class="zeno-features">
   <div class="zeno-container zeno-container--wide">
     <div class="zeno-section-header zeno-features__header">
-      <span class="zeno-section-kicker">What you can manage</span>
+      <span class="zeno-section-kicker">Features</span>
       <h2>{text.title}</h2>
       <p>{text.subtitle}</p>
     </div>
