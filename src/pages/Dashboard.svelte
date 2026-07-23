@@ -968,7 +968,7 @@
                 <span>{t(currency)}</span>
                 <strong class:negative={Number(amount) < 0}>
                   <span dir="ltr">{fmt(amount)}</span>
-                  <small>{t(currency)}</small>
+                
                 </strong>
               </div>
             {/each}

@@ -170,6 +170,16 @@
     });
   }
 
+  function subtractValueMaps(saleMap = {}, purchaseMap = {}) {
+    const result = {};
+    const currencies = new Set([...Object.keys(saleMap), ...Object.keys(purchaseMap)]);
+    currencies.forEach((currency) => {
+      const value = (toNumber(saleMap[currency]) || 0) - (toNumber(purchaseMap[currency]) || 0);
+      if (value !== 0) result[currency] = value;
+    });
+    return result;
+  }
+
   async function loadAll() {
     loading = true;
     try {
@@ -209,9 +219,9 @@
         totalProfitMap = {};
       }
 
+      await calculatePriceMap();
       await calculateTotalBenefit();
       await calculateTotalPredictedBenefit();
-      await calculatePriceMap();
       // Handle Thumbnails
       for (let product of products) {
         const img = await db.product_images.where('product_id').equals(product.id).last();
@@ -507,12 +517,10 @@
 
   function formatValueObj(obj) {
     if (!obj) return '-';
-    return Object.keys(obj)
-      .map(
-        (k) =>
-          `${toNumber(obj[k]).toLocaleString(undefined, { maximumFractionDigits: 3, minimumFractionDigits: 2 })} ${t(k)}`,
-      )
-      .join('<br />');
+    const totalAfn = Object.entries(obj).reduce((sum, [currency, amount]) => {
+      return sum + toNumber(exchangeRate(toNumber(amount), currency, 'AFN'));
+    }, 0);
+    return `${totalAfn.toLocaleString(undefined, { maximumFractionDigits: 3, minimumFractionDigits: 2 })} ${t('AFN')}`;
   }
 
   function exchangeRate(amount, fromCurrencyCode, toCurrencyCode) {
@@ -585,7 +593,8 @@
     totalBenefit = {};
     products.forEach((p) => {
       if (p.product_status !== 'active') return;
-      const benefit = toNumber(calculateBenefit(p));
+      const benefit = toNumber(totalProfitMap[p.id]);
+      if (!benefit) return;
       if (totalBenefit[p.buy_currency]) {
         totalBenefit[p.buy_currency] += benefit;
       } else {
@@ -635,16 +644,7 @@
   }
   let totalPredictedBenefit = {};
   async function calculateTotalPredictedBenefit() {
-    totalPredictedBenefit = {};
-    for (const p of products) {
-      if (p.product_status !== 'active') continue;
-      const benefit = toNumber(await calculatePredictedBenefit(p));
-      if (totalPredictedBenefit[p.buy_currency]) {
-        totalPredictedBenefit[p.buy_currency] += benefit;
-      } else {
-        totalPredictedBenefit[p.buy_currency] = benefit;
-      }
-    }
+    totalPredictedBenefit = subtractValueMaps(totalSaleValueMap, totalPurchaseCostMap);
     return totalPredictedBenefit;
   }
 

@@ -87,6 +87,13 @@
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.025);
   }
 
+  .index-panel::after {
+    content: '';
+    flex: 1 1 auto;
+    min-height: 0;
+    background: #ffffff;
+  }
+
   .index-page--flow {
     height: auto;
     min-height: 0;
@@ -99,9 +106,17 @@
     overflow: visible;
   }
 
+  .index-page--flow .index-panel::after {
+    display: none;
+  }
+
   .index-page--flow .index-content {
     flex: 0 0 auto;
     overflow: visible;
+  }
+
+  .index-page--flow .index-content :global(.data-table-wrap) {
+    flex: 0 0 auto;
   }
 
   .index-toolbar {
@@ -305,7 +320,7 @@
     position: relative;
     z-index: 1;
     display: flex;
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     flex-direction: column;
     min-width: 0;
     min-height: 0;
@@ -380,13 +395,12 @@
     position: relative;
     z-index: 10;
     flex: 0 0 auto;
-    min-height: 3.875rem;
     background: #ffffff;
   }
 
   .index-footer :global(.pagination-shell) {
-    min-height: 3.8125rem;
-    padding: 1.5rem 1.25rem;
+    min-height: auto;
+    padding: 0.875rem 1.25rem 1rem;
     border: 0;
     background: transparent;
   }
