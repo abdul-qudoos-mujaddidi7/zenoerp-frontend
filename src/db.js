@@ -3,7 +3,7 @@ import {setPermissionsFromUsers} from './auth/authStore';
 
 export const db = new Dexie('ERPDatabase');
 
-export let app_version = 'v1.7.5';
+export let app_version = 'v1.7.6';
 // Helper function to get current timestamp in ISO format
 export function getCurrentTimestamp() {
   return new Date().toISOString();
