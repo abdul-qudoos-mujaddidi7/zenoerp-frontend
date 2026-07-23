@@ -6,6 +6,7 @@
   let menuOpen = false;
   let root;
   let menuStyle = '';
+  const menuOpenEvent = 'table-actions:menu-open';
 
   $: visibleActions = actions.filter((action) => action.visible !== false);
   $: printActions = visibleActions.filter((action) => action.icon === 'bi-printer');
@@ -29,6 +30,7 @@
     menuStyle = openUp
       ? `left:${left}px;bottom:${window.innerHeight - rect.top + 5}px;top:auto;`
       : `left:${left}px;top:${rect.bottom + 5}px;bottom:auto;`;
+    document.dispatchEvent(new CustomEvent(menuOpenEvent, { detail: { root } }));
     menuOpen = true;
   }
 
@@ -39,11 +41,16 @@
     const closeOnEscape = (event) => {
       if (event.key === 'Escape') menuOpen = false;
     };
+    const closeOtherMenus = (event) => {
+      if (event.detail?.root !== root) menuOpen = false;
+    };
     document.addEventListener('click', closeOutside);
     document.addEventListener('keydown', closeOnEscape);
+    document.addEventListener(menuOpenEvent, closeOtherMenus);
     return () => {
       document.removeEventListener('click', closeOutside);
       document.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener(menuOpenEvent, closeOtherMenus);
     };
   });
 </script>

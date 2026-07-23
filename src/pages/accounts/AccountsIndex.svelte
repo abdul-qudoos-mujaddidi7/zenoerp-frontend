@@ -863,7 +863,8 @@
 
   .balance-list {
     display: inline-flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: center;
     gap: 0.25rem;

@@ -670,8 +670,12 @@
           </div>
           <div class="col-md-3 journal-debit-field">
             <label class="journal-field-label">{t('Debit')}</label>
-            <div class="journal-amount-row">
-              <div class="input-group input-group-sm journal-unified-input-group journal-unified-input-group--inline">
+            <div
+              class="journal-amount-row journal-amount-row--debit"
+              style="border-color: #e2e8f0 !important; box-shadow: none !important; outline: none !important;">
+              <div
+                class="input-group input-group-sm journal-unified-input-group journal-unified-input-group--inline"
+                style="border-color: transparent !important; box-shadow: none !important; outline: none !important;">
                 <input
                   type="text"
                   inputmode="numeric"
@@ -681,6 +685,7 @@
                   parseFloat(treasury_balance) > parseFloat(first_entry_debit) * -1
                     ? 'is-invalid'
                     : ''}"
+                  style="background: #feecec !important; background-color: #feecec !important; color: #b91c1c; border-color: transparent !important; box-shadow: none !important; outline: none !important;"
                   placeholder={t('Debit')}
                   value={format(first_entry_debit)}
                   on:keydown={onlyNumbers}
@@ -724,8 +729,12 @@
           </div>
           <div class="col-md-3 journal-credit-field">
             <label class="journal-field-label">{t('Credit')}</label>
-            <div class="journal-amount-row">
-              <div class="input-group input-group-sm journal-unified-input-group journal-unified-input-group--inline">
+            <div
+              class="journal-amount-row journal-amount-row--credit"
+              style="border-color: #e2e8f0 !important; box-shadow: none !important; outline: none !important;">
+              <div
+                class="input-group input-group-sm journal-unified-input-group journal-unified-input-group--inline"
+                style="border-color: transparent !important; box-shadow: none !important; outline: none !important;">
                 <input
                   type="text"
                   inputmode="numeric"
@@ -735,6 +744,7 @@
                   parseFloat(treasury_balance) > parseFloat(first_entry_credit) * -1
                     ? 'is-invalid'
                     : ''}"
+                  style="background: #e9f9ef !important; background-color: #e9f9ef !important; color: #047857; border-color: transparent !important; box-shadow: none !important; outline: none !important;"
                   placeholder={t('Credit')}
                   value={format(first_entry_credit)}
                   on:keydown={onlyNumbers}
@@ -1116,6 +1126,53 @@
     box-shadow: 0 0 0 2px rgba(47, 111, 237, 0.1);
   }
 
+  .journal-amount-row--debit {
+    border-color: #fecaca;
+    background: #feecec;
+  }
+
+  .journal-amount-row--debit:focus-within {
+    border-color: #f87171;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+  }
+
+  .journal-amount-row--credit {
+    border-color: #bbf7d0;
+    background: #e9f9ef;
+  }
+
+  .journal-amount-row--credit:focus-within {
+    border-color: #4ade80;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+  }
+
+  .journal-amount-row--debit:hover,
+  .journal-amount-row--credit:hover {
+    border-color: #e2e8f0;
+  }
+
+  .journal-amount-row--debit :global(.form-control),
+  .journal-amount-row--debit :global(.form-control:focus),
+  .journal-amount-row--debit .journal-currency-picker__btn {
+    background: #feecec !important;
+    color: #b91c1c;
+  }
+
+  .journal-amount-row--credit :global(.form-control),
+  .journal-amount-row--credit :global(.form-control:focus),
+  .journal-amount-row--credit .journal-currency-picker__btn {
+    background: #e9f9ef !important;
+    color: #047857;
+  }
+
+  .journal-amount-row--debit .journal-currency-picker {
+    border-inline-start-color: #fecaca;
+  }
+
+  .journal-amount-row--credit .journal-currency-picker {
+    border-inline-start-color: #bbf7d0;
+  }
+
   .journal-unified-input-group--inline {
     flex: 1;
     min-width: 0;
@@ -1204,6 +1261,48 @@
     border: 0 !important;
     box-shadow: none !important;
     background: #ffffff !important;
+  }
+
+  .journal-amount-row--debit .journal-unified-input-group :global(.form-control),
+  .journal-amount-row--debit .journal-unified-input-group :global(.form-control:hover),
+  .journal-amount-row--debit .journal-unified-input-group :global(.form-control:focus),
+  .journal-amount-row--debit .journal-currency-picker__btn,
+  .journal-amount-row--debit .journal-currency-picker__btn:hover {
+    background-color: #feecec !important;
+    color: #b91c1c;
+  }
+
+  .journal-amount-row--credit .journal-unified-input-group :global(.form-control),
+  .journal-amount-row--credit .journal-unified-input-group :global(.form-control:hover),
+  .journal-amount-row--credit .journal-unified-input-group :global(.form-control:focus),
+  .journal-amount-row--credit .journal-currency-picker__btn,
+  .journal-amount-row--credit .journal-currency-picker__btn:hover {
+    background-color: #e9f9ef !important;
+    color: #047857;
+  }
+
+  .journal-amount-row--debit,
+  .journal-amount-row--debit:hover,
+  .journal-amount-row--debit:focus-within,
+  .journal-amount-row--credit,
+  .journal-amount-row--credit:hover,
+  .journal-amount-row--credit:focus-within {
+    border-color: #e2e8f0 !important;
+    box-shadow: none !important;
+  }
+
+  .journal-amount-row--debit .journal-unified-input-group,
+  .journal-amount-row--debit .journal-unified-input-group:focus-within,
+  .journal-amount-row--credit .journal-unified-input-group,
+  .journal-amount-row--credit .journal-unified-input-group:focus-within {
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .journal-amount-row--debit :global(.form-control:focus),
+  .journal-amount-row--credit :global(.form-control:focus) {
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   .journal-unified-input-group :global(.input-group-text) {

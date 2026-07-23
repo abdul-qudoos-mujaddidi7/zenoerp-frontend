@@ -1,5 +1,6 @@
 <script>
-  import { onMount, tick } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
+  import { liveQuery } from 'dexie';
   import { db, logActivity } from '../../db.js';
   import { t, lang, translate_org_type, shortID } from '../../i18n/i18n';
   import { push } from 'svelte-spa-router';
@@ -33,6 +34,7 @@
   let imageUrl = null;
   let journals = [];
   let computedBalance = {}; // per-currency computed balances
+  let journalSubscription = null;
 
   let modalRef;
 
@@ -73,7 +75,12 @@
   onMount(async () => {
     await loadAccounts();
     await loadPayments();
+    
     tick().then(() => setDatePickers(handleDateChange, componentRoot));
+  });
+
+  onDestroy(() => {
+    journalSubscription?.unsubscribe();
   });
   // Filters & pagination
   let q = '';
@@ -81,7 +88,12 @@
   let pageSize = 10;
   const pageSizes = [10, 25, 50, 100];
 
-  $: if (id) loadAccount(id);
+  let loadedAccountId = null;
+
+  $: if (id && Number(id) !== loadedAccountId) {
+    loadedAccountId = Number(id);
+    loadAccount(id);
+  }
 
   // derived lists
   let filtered = [];
@@ -99,7 +111,7 @@
   let endDate = '';
 
   $: filtered = journals.filter((j) => {
-    const jd = j.date ? new Date(j.created_at) : null;
+    const jd = j.date ? new Date(j.date) : null;
     if (startDate && jd && jd < new Date(startDate)) return false;
     if (endDate && jd && jd > new Date(endDate + 'T23:59:59')) return false;
     if (q) {
@@ -120,7 +132,6 @@
 
     const asc = [...filtered].slice(); // oldest -> newest
 
-    console.log(asc);
 
     let lastBal = { ...starting };
     const processedAsc = asc.map((j) => {
@@ -161,32 +172,89 @@
   }
 
   async function loadAccount(id) {
-    account = await db.accounts.get(Number(id));
-    if (!account) return;
+    if (!id) return;
 
-    TREASURY_ID = (await db.accounts.where('code').equals('TREASURY').first())?.id || null;
+    summaryLoading = true;
 
-    accountType = account.account_type_id ? await db.account_types.get(account.account_type_id) : null;
+    // Stop the old subscription before switching accounts.
+    journalSubscription?.unsubscribe();
+    journalSubscription = null;
 
-    const img = await db.account_images.where('account_id').equals(account.id).first();
-    if (!img || !img.image) {
-      imageUrl = null;
-    } else if (typeof img.image === 'string') {
-      imageUrl = img.image;
-    } else {
-      try {
-        imageUrl = URL.createObjectURL(img.image);
-      } catch (e) {
+    // Clear stale information from the previous account.
+    journals = [];
+    filtered = [];
+    processed = [];
+    paginated = [];
+    computedBalance = {};
+
+    try {
+      account = await db.accounts.get(Number(id));
+
+      if (!account) {
+        accountType = null;
         imageUrl = null;
+        summaryLoading = false;
+        return;
       }
-    }
 
-    await loadJournals(account.id);
-    // reset filters when loading a new account
-    startDate = '';
-    endDate = '';
-    q = '';
-    page = 1;
+      TREASURY_ID =
+        (await db.accounts.where('code').equals('TREASURY').first())?.id ||
+        null;
+
+      accountType = account.account_type_id
+        ? await db.account_types.get(account.account_type_id)
+        : null;
+
+      const img = await db.account_images
+        .where('account_id')
+        .equals(account.id)
+        .first();
+
+      if (!img?.image) {
+        imageUrl = null;
+      } else if (typeof img.image === 'string') {
+        imageUrl = img.image;
+      } else {
+        try {
+          imageUrl = URL.createObjectURL(img.image);
+        } catch (error) {
+          console.error('Failed to create the account image URL:', error);
+          imageUrl = null;
+        }
+      }
+
+      // Reset report filters before calculating the first summary.
+      startDate = '';
+      endDate = '';
+      q = '';
+      page = 1;
+
+      await loadJournals(account.id);
+
+      /*
+       * journals updates filtered, then the report reactive block updates
+       * processed and computedBalance. Waiting for two flushes guarantees
+       * that the first visible summary contains the final values.
+       */
+      await tick();
+      await tick();
+
+      summaryLoading = false;
+      await tick();
+
+      watchJournals(account.id);
+    } catch (error) {
+      console.error('Failed to load the account report:', error);
+
+      account = null;
+      accountType = null;
+      journals = [];
+      filtered = [];
+      processed = [];
+      paginated = [];
+      computedBalance = {};
+      summaryLoading = false;
+    }
   }
 
   async function deleteJournal(id) {
@@ -203,97 +271,48 @@
     await loadJournals(account.id);
   }
 
-  async function loadJournals(id) {
-
-    const allJournals = await db.journals
-        .where('status')
-        .equals(1)
-        .toArray();
-
-
+  function setAccountJournals(id, allJournals) {
     const processedLocal = [];
-
-
     for (const j of allJournals) {
+      let debit = 0;
+      let credit = 0;
 
-        let debit = 0;
-        let credit = 0;
+      if (Number(j.first_entry_account) === Number(id)) {
+        debit += Number(j.first_entry_debit) || 0;
+        credit += Number(j.first_entry_credit) || 0;
+      }
 
+      if (Number(j.second_entry_account) === Number(id)) {
+        debit += Number(j.second_entry_debit) || 0;
+        credit += Number(j.second_entry_credit) || 0;
+      }
 
-        // Same logic as AccountsHelper first_entry
-        if (j.first_entry_account === id) {
-
-            debit += Number(j.first_entry_debit) || 0;
-            credit += Number(j.first_entry_credit) || 0;
-
-        }
-
-
-        // Same logic as AccountsHelper second_entry
-        if (j.second_entry_account === id) {
-
-            debit += Number(j.second_entry_debit) || 0;
-            credit += Number(j.second_entry_credit) || 0;
-
-        }
-
-
-        // Only keep journals belonging to this account
-        if (debit !== 0 || credit !== 0) {
-
-            processedLocal.push({
-                ...j,
-                debit,
-                credit,
-                currency: j.currency
-            });
-
-        }
+      if (debit !== 0 || credit !== 0) {
+        processedLocal.push({
+          ...j,
+          debit,
+          credit,
+          currency: j.currency,
+        });
+      }
     }
 
-
-    // same ordering as your old component
-    processedLocal.sort(
-        (a,b)=>new Date(a.date)-new Date(b.date)
-    );
-
-
+    processedLocal.sort((a, b) => new Date(a.date) - new Date(b.date));
     journals = processedLocal;
+  }
 
+  async function loadJournals(id) {
+    const allJournals = await db.journals.where('status').equals(1).toArray();
+    setAccountJournals(id, allJournals);
+  }
 
-    // EXACT same balance logic as AccountsHelper
-    computedBalance = {};
-
-
-    for (const j of journals) {
-
-        const cur = j.currency;
-
-
-        if (!computedBalance[cur]) {
-            computedBalance[cur] = {
-                debit: 0,
-                credit: 0,
-                balance: 0
-            };
-        }
-
-
-        computedBalance[cur].debit += j.debit;
-        computedBalance[cur].credit += j.credit;
-
-
-        computedBalance[cur].balance += 
-            j.credit - j.debit;
-    }
-
-
-    console.log(
-        "Account balance calculated:",
-        id,
-        computedBalance
-    );
-}
+  function watchJournals(id) {
+    journalSubscription?.unsubscribe();
+    journalSubscription = liveQuery(() => db.journals.where('status').equals(1).toArray()).subscribe({
+      next: (allJournals) => setAccountJournals(id, allJournals),
+      error: (error) => console.error('Failed to refresh account report journals', error),
+    });
+  }
 
   function fmtDate(d) {
     if (!d) return '-';
@@ -305,7 +324,7 @@
   }
 
   function formatRunningObj(obj) {
-    console.log(obj);
+
     if (!obj) return '-';
     return Object.keys(obj)
       .map((k) => `${obj[k].toLocaleString()} ${t(k)}`)
@@ -330,8 +349,8 @@
     return arr;
   }
 
-  function formatSummaryValues(type) {
-    return getCurrencyInfoArray(computedBalance)
+  function formatSummaryValues(balance, type) {
+    return getCurrencyInfoArray(balance)
       .map((cur) => `${Number(cur[type] || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })} ${t(cur.code)}`)
       .join('<br />') || '0';
   }
@@ -375,7 +394,53 @@
 
   import { auth } from '../../auth/authStore';
   $: permissions = $auth.permissions;
-  let showSummaryCards = false;
+  // Open the summary automatically when this page is first displayed.
+  let showSummaryCards = true;
+  let summaryLoading = true;
+  let summaryReady = false;
+
+  let summaryCurrencies = [];
+  let creditSummary = '0';
+  let debitSummary = '0';
+  let balanceSummary = '0';
+  let summaryRenderKey = 'empty';
+
+  $: summaryCurrencies = getCurrencyInfoArray(computedBalance);
+
+  $: creditSummary =
+    summaryCurrencies.length > 0
+      ? formatSummaryValues(computedBalance, 'credit')
+      : '0';
+
+  $: debitSummary =
+    summaryCurrencies.length > 0
+      ? formatSummaryValues(computedBalance, 'debit')
+      : '0';
+
+  $: balanceSummary =
+    summaryCurrencies.length > 0
+      ? formatSummaryValues(computedBalance, 'balance')
+      : '0';
+
+  /*
+   * The summary may display zero values when an account has no journals,
+   * but it must not display before the account load has completed.
+   */
+  $: summaryReady = !summaryLoading && account !== null;
+
+  /*
+   * SummaryCard is remounted whenever its calculated values change.
+   * This prevents its slot from keeping the empty first-render content.
+   */
+  $: summaryRenderKey =
+    summaryCurrencies.length > 0
+      ? summaryCurrencies
+          .map(
+            (currency) =>
+              `${currency.code}:${currency.credit}:${currency.debit}:${currency.balance}`,
+          )
+          .join('|')
+      : `empty:${account?.id || 'none'}`;
 
   function getReportActions(journal) {
     const actions = [];
@@ -414,7 +479,7 @@
     dir={t('dir')}
     ariaLabel={t('Account Report')}
     toolbarWidth="25rem"
-    showStats={showSummaryCards && getCurrencyInfoArray(computedBalance).length > 0}
+    showStats={showSummaryCards && summaryReady}
     showFooter={processed.length > 0}
     dense={true}
     tablePadding={true}>
@@ -426,10 +491,29 @@
         loading={generatingPDF}
         disabled={generatingPDF}
         on:click={exportReport} />
-      <button type="button" class="index-settings-button" class:is-active={showSummaryCards}
-        aria-label={t('Financial summary')} aria-expanded={showSummaryCards} title={t('Financial summary')}
-        on:click={() => (showSummaryCards = !showSummaryCards)}>
-        <i class="bi {showSummaryCards ? 'bi-x-lg' : 'bi-wallet2'}" aria-hidden="true"></i>
+      <button
+        type="button"
+        class="index-settings-button"
+        class:is-active={showSummaryCards}
+        aria-label={t('Financial summary')}
+        aria-expanded={showSummaryCards}
+        title={t('Financial summary')}
+        disabled={summaryLoading}
+        on:click={() => {
+          if (!summaryLoading) {
+            showSummaryCards = !showSummaryCards;
+          }
+        }}>
+        {#if summaryLoading}
+          <span
+            class="spinner-border spinner-border-sm"
+            role="status"
+            aria-hidden="true"></span>
+        {:else}
+          <i
+            class="bi {showSummaryCards ? 'bi-x-lg' : 'bi-wallet2'}"
+            aria-hidden="true"></i>
+        {/if}
       </button>
     </svelte:fragment>
 
@@ -447,17 +531,38 @@
     </svelte:fragment>
 
     <svelte:fragment slot="stats">
-      <div class="index-summary-grid account-report-summary">
-        <SummaryCard label={t('Credit')} icon="bi-arrow-down-left" tone="green">
-          <div class="report-summary-values" dir="ltr">{@html formatSummaryValues('credit')}</div>
-        </SummaryCard>
-        <SummaryCard label={t('Debit')} icon="bi-arrow-up-right" tone="amber">
-          <div class="report-summary-values" dir="ltr">{@html formatSummaryValues('debit')}</div>
-        </SummaryCard>
-        <SummaryCard label={t('Balance')} icon="bi-wallet2" tone="cyan">
-          <div class="report-summary-values" dir="ltr">{@html formatSummaryValues('balance')}</div>
-        </SummaryCard>
-      </div>
+      {#if showSummaryCards && summaryReady}
+        {#key summaryRenderKey}
+          <div class="index-summary-grid account-report-summary">
+            <SummaryCard
+              label={t('Credit')}
+              icon="bi-arrow-down-left"
+              tone="green">
+              <div class="report-summary-values" dir="ltr">
+                {@html creditSummary}
+              </div>
+            </SummaryCard>
+
+            <SummaryCard
+              label={t('Debit')}
+              icon="bi-arrow-up-right"
+              tone="amber">
+              <div class="report-summary-values" dir="ltr">
+                {@html debitSummary}
+              </div>
+            </SummaryCard>
+
+            <SummaryCard
+              label={t('Balance')}
+              icon="bi-wallet2"
+              tone="cyan">
+              <div class="report-summary-values" dir="ltr">
+                {@html balanceSummary}
+              </div>
+            </SummaryCard>
+          </div>
+        {/key}
+      {/if}
     </svelte:fragment>
 
   {#if false}
@@ -789,7 +894,13 @@
   </IndexPageLayout>
 </div>
 
-<EditJournalModal bind:this={modalRef} on:saved={loadJournals} />
+<EditJournalModal
+  bind:this={modalRef}
+  on:saved={() => {
+    if (account?.id) {
+      loadJournals(account.id);
+    }
+  }} />
 
 {#if showReceipt}
   <JournalReceiptModal journal={selectedJournal} on:close={() => (showReceipt = false)} />

@@ -401,7 +401,12 @@
     "Setting updated successfully.": "تنظیم با موفقیت به‌روزرسانی شد.",
     "Are you sure you want to delete this setting?": "آیا مطمئن هستید که می‌خواهید این تنظیم را حذف کنید؟",
     "Delete": "حذف",
+    "No purchase items added": "هیچ کالایی برای خرید اضافه نشده است.",
     "Update Setting": "به‌روزرسانی تنظیم",
+    "Reference Type": "نوع مرجع",
+    "Search exchanges...": "جستجوی صرافی‌ها...",
+    "Search documents...": "جستجوی اسناد...", 
+    
     "Save Setting": "ذخیره تنظیم",
     "Symbol": "نماد",
     "Rate": "نرخ",

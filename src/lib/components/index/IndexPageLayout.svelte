@@ -87,13 +87,6 @@
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.025);
   }
 
-  .index-panel::after {
-    content: '';
-    flex: 1 1 auto;
-    min-height: 0;
-    background: #ffffff;
-  }
-
   .index-page--flow {
     height: auto;
     min-height: 0;
@@ -106,10 +99,6 @@
     overflow: visible;
   }
 
-  .index-page--flow .index-panel::after {
-    display: none;
-  }
-
   .index-page--flow .index-content {
     flex: 0 0 auto;
     overflow: visible;
@@ -117,6 +106,7 @@
 
   .index-page--flow .index-content :global(.data-table-wrap) {
     flex: 0 0 auto;
+    max-height: var(--index-table-max-height, calc(100dvh - 17.5rem));
   }
 
   .index-toolbar {
@@ -320,7 +310,7 @@
     position: relative;
     z-index: 1;
     display: flex;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     flex-direction: column;
     min-width: 0;
     min-height: 0;
@@ -343,8 +333,11 @@
     flex: 1 1 auto;
     width: 100%;
     min-height: 0;
-    max-height: var(--index-table-max-height, calc(100dvh - 17.5rem));
     overflow: auto;
+  }
+
+  .index-page:not(.index-page--flow) .index-content :global(.data-table) {
+    height: 100%;
   }
 
   .index-content :global(.erp-badge) {

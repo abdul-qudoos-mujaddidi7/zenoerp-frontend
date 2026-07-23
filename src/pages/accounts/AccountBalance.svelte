@@ -261,74 +261,213 @@
 <div class="profile-page">
   <section class="profile-hero">
     <div class="hero-glow"></div>
+
+    <!-- Header actions -->
     <div class="hero-actions">
-      <button class="back-button" type="button" on:click={goBack} aria-label={t('Back')}>
+      <button
+        class="back-button"
+        type="button"
+        on:click={goBack}
+        aria-label={t('Back')}
+      >
         <i class="bi bi-arrow-left"></i>
       </button>
+
       {#if permissions?.some((p) => p.code === 'Accounts' && p.edit)}
-        <button on:click={() => modalRef.openModal(account)} class="edit-button" type="button">
-          <i class="bi bi-pencil-square"></i><span>{t('Edit profile')}</span>
+        <button
+          on:click={() => modalRef.openModal(account)}
+          class="edit-button"
+          type="button"
+        >
+          <i class="bi bi-pencil-square"></i>
+          <span>{t('Edit profile')}</span>
         </button>
       {/if}
     </div>
+
+    <!-- Profile and contact area -->
     <div class="profile-identity">
-      <div class="avatar-wrap">
-      {#if imageUrl}
-          <img src={imageUrl} alt={displayName} class="profile-avatar" />
-      {:else}
-          <div class="profile-avatar avatar-fallback">
-            {showInitials(displayName)}
-          </div>
-        {/if}
-        <span class="status-dot" title={t('Active')}></span>
-      </div>
-      <div class="identity-copy">
-      
-        <div class="name-row">
-          <h1>{displayName}</h1>
-          <span class="type-pill">{displayType}</span>
+      <!-- Profile image and name -->
+      <div class="profile-main">
+        <div class="avatar-wrap">
+          {#if imageUrl}
+            <img
+              src={imageUrl}
+              alt={displayName}
+              class="profile-avatar"
+            />
+          {:else}
+            <div class="profile-avatar avatar-fallback">
+              {showInitials(displayName)}
+            </div>
+          {/if}
+
+          <span
+            class="status-dot"
+            title={t('Active')}
+          ></span>
         </div>
-        {#if account?.description}
-          <p class="profile-description">{account.description}</p>
-        {/if}
+
+        <div class="identity-copy">
+          <div class="name-row">
+            <h1>{displayName}</h1>
+            <span class="type-pill">{displayType}</span>
+          </div>
+
+          {#if account?.description}
+            <p class="profile-description">
+              {account.description}
+            </p>
+          {/if}
+        </div>
       </div>
+
+      <!-- Contact information -->
+      <section class="hero-contact-card">
+        <div class="contact-list">
+          <!-- Row 1: WhatsApp and Phone 2 -->
+          <div class="contact-item">
+            <span class="contact-icon whatsapp-icon">
+              <i class="bi bi-whatsapp"></i>
+            </span>
+
+            <div class="contact-content">
+              <small>{t('Whatsapp Number')}</small>
+
+              <strong dir="ltr">
+                {account?.phone || '—'}
+              </strong>
+            </div>
+          </div>
+
+          <div class="contact-item">
+            <span class="contact-icon">
+              <i class="bi bi-phone"></i>
+            </span>
+
+            <div class="contact-content">
+              <small>{t('Phone 2')}</small>
+
+              <strong dir="ltr">
+                {account?.phone2 || '—'}
+              </strong>
+            </div>
+          </div>
+
+          <!-- Row 2: Email and Address -->
+          <div class="contact-item">
+            <span class="contact-icon">
+              <i class="bi bi-envelope"></i>
+            </span>
+
+            <div class="contact-content">
+              <small>{t('Email')}</small>
+
+              <strong
+                class="contact-value"
+                dir="ltr"
+                title={account?.email || ''}
+              >
+                {account?.email || '—'}
+              </strong>
+            </div>
+          </div>
+
+          <div class="contact-item">
+            <span class="contact-icon">
+              <i class="bi bi-geo-alt"></i>
+            </span>
+
+            <div class="contact-content">
+              <small>{t('Address')}</small>
+
+              <strong
+                class="contact-value"
+                title={account?.address || ''}
+              >
+                {account?.address || '—'}
+              </strong>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
-    <section class="details-card hero-contact-card">
-      <div class="section-heading">
-        <div><span class="section-kicker">{t('Profile')}</span><h2>{t('Contact information')}</h2></div>
-        <i class="bi bi-person-lines-fill"></i>
-      </div>
-      <div class="contact-list">
-        <div class="contact-item"><span class="contact-icon"><i class="bi bi-telephone"></i></span><div><small>{t('Whatsapp Number')}</small><strong dir="ltr">{account?.phone || '—'}</strong></div></div>
-        <div class="contact-item"><span class="contact-icon"><i class="bi bi-phone"></i></span><div><small>{t('Phone 2')}</small><strong dir="ltr">{account?.phone2 || '—'}</strong></div></div>
-        <div class="contact-item"><span class="contact-icon"><i class="bi bi-envelope"></i></span><div><small>{t('Email')}</small><strong>{account?.email || '—'}</strong></div></div>
-        <div class="contact-item"><span class="contact-icon"><i class="bi bi-geo-alt"></i></span><div><small>{t('Address')}</small><strong>{account?.address || '—'}</strong></div></div>
-      </div>
-    </section>
   </section>
 
+  <!-- Financial information -->
   <div class="profile-grid">
     <section class="finance-section">
       <div class="section-heading finance-heading">
-        <div><span class="section-kicker">{t('Overview')}</span><h2>{t('Financial summary')}</h2></div>
-        <span class="currency-count">{balanceItems.length} {t('Currencies')}</span>
+        <div>
+          <span class="section-kicker">
+            {t('Overview')}
+          </span>
+
+          <h2>{t('Financial summary')}</h2>
+        </div>
+
+        <span class="currency-count">
+          {balanceItems.length} {t('Currencies')}
+        </span>
       </div>
+
       {#if balanceItems.length}
         <div class="balance-grid">
           {#each balanceItems as cur}
-            <article class="balance-card" class:negative={cur.balance < 0}>
-              <div class="balance-top"><span class="currency-badge">{t(cur.code)}</span><i class="bi bi-wallet2"></i></div>
+            <article
+              class="balance-card"
+              class:negative={cur.balance < 0}
+            >
+              <div class="balance-top">
+                <span class="currency-badge">
+                  {t(cur.code)}
+                </span>
+
+                <i class="bi bi-wallet2"></i>
+              </div>
+
               <small>{t('Current balance')}</small>
-              <div class="balance-value" dir="ltr">{cur.balance.toLocaleString()} <em>{t(cur.code)}</em></div>
+
+              <div class="balance-value" dir="ltr">
+                {cur.balance.toLocaleString()}
+                <em>{t(cur.code)}</em>
+              </div>
+
               <div class="money-details">
-                <div><span><i class="bi bi-arrow-down-left"></i> {t('Credit')}</span><strong dir="ltr">{cur.credit.toLocaleString()}</strong></div>
-                <div><span><i class="bi bi-arrow-up-right"></i> {t('Debit')}</span><strong dir="ltr">{cur.debit.toLocaleString()}</strong></div>
+                <div>
+                  <span>
+                    <i class="bi bi-arrow-down-left"></i>
+                    {t('Credit')}
+                  </span>
+
+                  <strong dir="ltr">
+                    {cur.credit.toLocaleString()}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    <i class="bi bi-arrow-up-right"></i>
+                    {t('Debit')}
+                  </span>
+
+                  <strong dir="ltr">
+                    {cur.debit.toLocaleString()}
+                  </strong>
+                </div>
               </div>
             </article>
           {/each}
         </div>
       {:else}
-        <div class="empty-balance"><i class="bi bi-bar-chart"></i><div><strong>{t('No financial activity')}</strong><span>{t('Transactions will appear here')}</span></div></div>
+        <div class="empty-balance">
+          <i class="bi bi-bar-chart"></i>
+
+          <div>
+            <strong>{t('No financial activity')}</strong>
+            <span>{t('Transactions will appear here')}</span>
+          </div>
+        </div>
       {/if}
     </section>
   </div>
@@ -339,36 +478,831 @@
   {accountTypes}
   on:saved={() => {
     loadAccount(id);
-  }} />
+  }}
+/>
 
 <style>
-  .profile-page{--profile-primary:var(--bs-primary,var(--mdb-primary,#0f6efd));--profile-primary-rgb:var(--bs-primary-rgb,var(--mdb-primary-rgb,15,110,253));padding:0 1px 14px;color:var(--mdb-body-color,#172033)}
-  .profile-hero{position:relative;isolation:isolate;overflow:hidden;min-height:0;padding:12px 30px 18px;border-radius:14px;background:linear-gradient(118deg,#3979ed,#1760df 48%,#1b4ebd);color:#fff;display:grid;grid-template-columns:minmax(0,1fr);align-content:start;gap:12px;box-shadow:0 18px 42px rgba(var(--profile-primary-rgb),.18)}
-  .hero-glow{position:absolute;z-index:-1;width:520px;height:520px;border-radius:50%;left:-190px;top:-360px;background:rgba(255,255,255,.12)}
-  .hero-glow:after{content:"";position:absolute;width:280px;height:280px;border:1px solid rgba(255,255,255,.16);border-radius:50%;right:-180px;bottom:-245px}
-  .hero-actions{position:absolute;z-index:2;top:12px;left:24px;display:flex;align-items:center;justify-content:flex-start;gap:10px;direction:ltr}
-  .back-button{width:32px;height:32px;border:1px solid rgba(255,255,255,.14);border-radius:9px;background:rgba(255,255,255,.12);color:#fff;display:grid;place-items:center}
-  .profile-identity{position:relative;z-index:1;display:flex;align-items:center;gap:18px;min-width:0;margin-top:6px;padding-left:220px;padding-inline-end:0}
-  .avatar-wrap{position:relative;flex:0 0 auto}
-  .profile-avatar{width:86px;height:86px;border-radius:18px;object-fit:cover;border:2px solid rgba(255,255,255,.7);box-shadow:0 14px 28px rgba(var(--profile-primary-rgb),.26)}
-  .avatar-fallback{display:grid;place-items:center;background:#fff;color:var(--profile-primary);font-size:34px;font-weight:800}
-  .status-dot{position:absolute;right:-2px;bottom:7px;width:17px;height:17px;border:3px solid color-mix(in srgb,var(--profile-primary) 76%,#0b2466);border-radius:50%;background:#4ade80}
-  .eyebrow,.section-kicker{text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:700;opacity:.72}
-  .name-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.name-row h1{margin:2px 0;font-size:27px;font-weight:800;letter-spacing:-.02em}.type-pill{padding:5px 10px;border:1px solid rgba(255,255,255,.26);border-radius:999px;background:rgba(255,255,255,.12);font-size:11px;font-weight:750}.profile-description{margin:6px 0 0;max-width:620px;color:rgba(255,255,255,.76);font-size:12px;line-height:1.5}
-  .edit-button{border:1px solid rgba(255,255,255,.28);border-radius:9px;padding:8px 12px;background:rgba(255,255,255,.13);color:#fff;font-size:12px;font-weight:750;box-shadow:none;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);direction:rtl}.edit-button:hover{background:rgba(255,255,255,.2)}.edit-button i{margin-inline-end:6px}
-  .profile-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}.details-card,.finance-section{border:1px solid #e3e9f3;border-radius:12px;background:var(--mdb-body-bg,#fff);padding:14px 16px;box-shadow:none}.finance-section{width:100%}
-  .hero-contact-card{position:relative;z-index:1;width:100%;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
-  .hero-contact-card .section-heading{display:none}
-  .hero-contact-card .contact-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;border:1px solid rgba(255,255,255,.16);border-radius:12px;overflow:hidden;background:rgba(7,27,78,.22);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-  .hero-contact-card .contact-item{min-height:58px;padding:10px 12px;border:0;border-inline-end:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.07)}
-  .hero-contact-card .contact-item:last-child{border:0}
-  .hero-contact-card .contact-item:hover{background:rgba(255,255,255,.11)}
-  .hero-contact-card .contact-icon{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.13);color:#fff;font-size:13px}
-  .hero-contact-card .contact-item div{display:grid;gap:2px;align-items:center;justify-content:normal}
-  .hero-contact-card .contact-item small{color:rgba(255,255,255,.62);font-size:9px;font-weight:750}
-  .hero-contact-card .contact-item strong{color:#fff;font-size:11px;font-weight:750;line-height:1.25}
-  .section-heading{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:9px}.section-heading h2{margin:1px 0 0;font-size:14px;font-weight:750}.section-heading>i{font-size:15px;color:#2461db;background:#edf3ff;border-radius:8px;padding:6px 8px}.section-kicker{color:#2461db}.contact-list{display:grid;grid-template-columns:1fr;gap:0;border:1px solid #e1e7f0;border-radius:10px;overflow:hidden}.contact-item{display:flex;align-items:center;gap:9px;min-height:42px;padding:6px 9px;border-radius:0;border-bottom:1px solid #e7ebf2}.contact-item:last-child{border-bottom:0}.contact-item:hover{background:rgba(72,103,170,.035)}.contact-icon{width:27px;height:27px;display:grid;place-items:center;border-radius:7px;background:transparent;color:#2361e7;font-size:14px}.contact-item div{min-width:0;display:flex;flex:1;flex-direction:row;align-items:center;justify-content:space-between;gap:8px}.contact-item small{color:#6f7c94;font-size:10px}.contact-item strong{font-size:10px;font-weight:650;overflow-wrap:anywhere;color:#354258}
-  .finance-heading{align-items:center}.currency-count{font-size:10px;font-weight:700;color:#596880;background:#f6f8fb;border:1px solid #e2e8f1;border-radius:8px;padding:5px 8px}.balance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}.balance-card{padding:10px 12px;border-radius:10px;background:linear-gradient(145deg,#fbfdff,#f5f8ff);border:1px solid #dce6fa}.balance-card.negative{background:linear-gradient(145deg,#fffdfd,#fff7f6);border-color:#f4deda}.balance-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}.currency-badge{padding:3px 7px;border-radius:999px;background:#e7efff;color:#2457bd;font-size:9px;font-weight:800}.negative .currency-badge{background:#ffe9e7;color:#d9473b}.balance-top i{color:#3b6bd3;background:#edf3ff;border-radius:50%;padding:5px}.negative .balance-top i{color:#e24a3e;background:#ffebe9}.balance-card>small{display:block;color:#7a879e;font-size:9px}.balance-value{font-size:18px;font-weight:800;letter-spacing:-.03em;margin:0 0 6px;color:#2052ae}.negative .balance-value{color:#dc443b}.balance-value em{font-size:8px;font-style:normal;letter-spacing:.03em}.money-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border-top:1px solid rgba(117,137,180,.14);padding-top:7px;direction:rtl}.money-details div{display:grid;grid-template-rows:14px 18px;align-items:start;min-width:0;padding-inline:9px}.money-details div+div{border-inline-start:1px solid rgba(117,137,180,.14)}.money-details span{display:block;height:14px;font-size:8px;line-height:12px;color:#8290a8;white-space:nowrap}.money-details strong{display:block;height:18px;font-size:10px;line-height:18px;margin:0;font-variant-numeric:tabular-nums;white-space:nowrap}.money-details div:first-child i{color:#16a36a}.money-details div:last-child i{color:#e36555}.empty-balance{min-height:76px;display:flex;align-items:center;justify-content:center;gap:10px;border:1px dashed #d8e0ef;border-radius:9px;color:#77859c}.empty-balance>i{font-size:20px}.empty-balance div{display:flex;flex-direction:column}.empty-balance span{font-size:10px}
-  @media(max-width:900px){.profile-identity{padding-left:170px;padding-inline-end:0}.hero-contact-card .contact-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  @media(max-width:600px){.profile-hero{padding:12px 14px 14px}.hero-actions{left:14px}.profile-identity{align-items:flex-start;margin-top:6px;padding-left:150px;padding-inline-start:0}.profile-avatar{width:68px;height:68px;border-radius:15px}.avatar-fallback{font-size:27px}.name-row h1{font-size:20px}.details-card,.finance-section{padding:14px}.contact-list{grid-template-columns:1fr}.profile-description{font-size:11px}.hero-contact-card .contact-list{grid-template-columns:1fr}.hero-contact-card .contact-item{min-height:44px;border-inline-end:0;border-bottom:1px solid rgba(255,255,255,.13)}}
+  .profile-page {
+    --profile-primary: var(
+      --bs-primary,
+      var(--mdb-primary, #0f6efd)
+    );
+
+    --profile-primary-rgb: var(
+      --bs-primary-rgb,
+      var(--mdb-primary-rgb, 15, 110, 253)
+    );
+
+    padding: 0 1px 14px;
+    color: var(--mdb-body-color, #172033);
+  }
+
+  /* ========================================
+     Profile hero
+  ======================================== */
+
+  .profile-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+
+    min-height: 0;
+    padding: 20px 30px;
+    border-radius: 14px;
+
+    background:
+      linear-gradient(
+        118deg,
+        #3979ed,
+        #1760df 48%,
+        #1b4ebd
+      );
+
+    color: #ffffff;
+
+    box-shadow:
+      0 18px 42px
+      rgba(var(--profile-primary-rgb), 0.18);
+  }
+
+  .hero-glow {
+    position: absolute;
+    z-index: -1;
+    top: -360px;
+    left: -190px;
+
+    width: 520px;
+    height: 520px;
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.12);
+    pointer-events: none;
+  }
+
+  .hero-glow::after {
+    position: absolute;
+    right: -180px;
+    bottom: -245px;
+
+    width: 280px;
+    height: 280px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 50%;
+
+    content: "";
+  }
+
+  /* ========================================
+     Header buttons
+  ======================================== */
+
+  .hero-actions {
+    position: absolute;
+    z-index: 5;
+    top: 14px;
+    left: 24px;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    direction: ltr;
+  }
+
+  .back-button {
+    display: grid;
+    place-items: center;
+
+    width: 34px;
+    height: 34px;
+    padding: 0;
+
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 9px;
+
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+
+    cursor: pointer;
+
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+
+    transition:
+      background 160ms ease,
+      transform 160ms ease;
+  }
+
+  .back-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .edit-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+
+    min-height: 34px;
+    padding: 7px 12px;
+
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 9px;
+
+    background: rgba(255, 255, 255, 0.13);
+    color: #ffffff;
+
+    font-size: 11px;
+    font-weight: 750;
+
+    cursor: pointer;
+    box-shadow: none;
+
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+
+    transition:
+      background 160ms ease,
+      transform 160ms ease;
+  }
+
+  .edit-button:hover {
+    background: rgba(255, 255, 255, 0.21);
+    transform: translateY(-1px);
+  }
+
+  .edit-button i {
+    margin: 0;
+    font-size: 13px;
+  }
+
+  /* ========================================
+     Identity and contact layout
+  ======================================== */
+
+  .profile-identity {
+    position: relative;
+    z-index: 1;
+
+    display: grid;
+    grid-template-columns:
+      minmax(260px, 0.7fr)
+      minmax(500px, 1.3fr);
+    align-items: center;
+    gap: 30px;
+
+    width: 100%;
+    min-width: 0;
+
+    padding-left: 190px;
+  }
+
+  .profile-main {
+    display: flex;
+    align-items: center;
+    gap: 17px;
+
+    min-width: 0;
+  }
+
+  /* ========================================
+     Avatar
+  ======================================== */
+
+  .avatar-wrap {
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  .profile-avatar {
+    display: block;
+
+    width: 88px;
+    height: 88px;
+
+    border: 2px solid rgba(255, 255, 255, 0.72);
+    border-radius: 19px;
+
+    object-fit: cover;
+
+    box-shadow:
+      0 14px 28px
+      rgba(var(--profile-primary-rgb), 0.26);
+  }
+
+  .avatar-fallback {
+    display: grid;
+    place-items: center;
+
+    background: #ffffff;
+    color: var(--profile-primary);
+
+    font-size: 34px;
+    font-weight: 800;
+  }
+
+  .status-dot {
+    position: absolute;
+    right: -2px;
+    bottom: 7px;
+
+    width: 17px;
+    height: 17px;
+
+    border: 3px solid
+      color-mix(
+        in srgb,
+        var(--profile-primary) 76%,
+        #0b2466
+      );
+
+    border-radius: 50%;
+    background: #4ade80;
+
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.16);
+  }
+
+  /* ========================================
+     Identity text
+  ======================================== */
+
+  .identity-copy {
+    min-width: 0;
+  }
+
+  .name-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+  }
+
+  .name-row h1 {
+    margin: 2px 0;
+
+    color: #ffffff;
+
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+
+  .type-pill {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 5px 10px;
+
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    border-radius: 999px;
+
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+
+    font-size: 10px;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .profile-description {
+    display: -webkit-box;
+    overflow: hidden;
+
+    max-width: 400px;
+    margin: 6px 0 0;
+
+    color: rgba(255, 255, 255, 0.76);
+
+    font-size: 11px;
+    line-height: 1.55;
+
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  /* ========================================
+     Contact card
+  ======================================== */
+
+  .hero-contact-card {
+    width: 100%;
+    min-width: 0;
+
+    padding: 0;
+    border: 0;
+
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .contact-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+
+    overflow: hidden;
+
+    width: 100%;
+
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+
+    background: rgba(7, 27, 78, 0.24);
+
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+
+    min-width: 0;
+    min-height: 59px;
+
+    padding: 10px 13px;
+
+    border: 0;
+
+    background: rgba(255, 255, 255, 0.07);
+
+    transition:
+      background 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  /*
+   * Creates the vertical and horizontal
+   * separation between the four fields.
+   */
+  .contact-item:nth-child(1),
+  .contact-item:nth-child(3) {
+    border-inline-end:
+      1px solid rgba(255, 255, 255, 0.13);
+  }
+
+  .contact-item:nth-child(1),
+  .contact-item:nth-child(2) {
+    border-bottom:
+      1px solid rgba(255, 255, 255, 0.13);
+  }
+
+  .contact-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .contact-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+
+    width: 32px;
+    height: 32px;
+
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 9px;
+
+    background: rgba(255, 255, 255, 0.13);
+    color: #ffffff;
+
+    font-size: 13px;
+  }
+
+  .contact-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 3px;
+
+    min-width: 0;
+  }
+
+  .contact-content small {
+    display: block;
+
+    color: rgba(255, 255, 255, 0.62);
+
+    font-size: 9px;
+    font-weight: 750;
+    line-height: 1.2;
+  }
+
+  .contact-content strong {
+    display: block;
+    overflow: hidden;
+
+    width: 100%;
+    max-width: 100%;
+
+    color: #ffffff;
+
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1.35;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* ========================================
+     Financial section
+  ======================================== */
+
+  .profile-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+
+    margin-top: 10px;
+  }
+
+  .finance-section {
+    width: 100%;
+    padding: 14px 16px;
+
+    border: 1px solid #e3e9f3;
+    border-radius: 12px;
+
+    background: var(--mdb-body-bg, #ffffff);
+
+    box-shadow: none;
+  }
+
+  .section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    margin-bottom: 9px;
+  }
+
+  .section-heading h2 {
+    margin: 1px 0 0;
+
+    font-size: 14px;
+    font-weight: 750;
+  }
+
+  .section-kicker {
+    color: #2461db;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .finance-heading {
+    align-items: center;
+  }
+
+  .currency-count {
+    padding: 5px 8px;
+
+    border: 1px solid #e2e8f1;
+    border-radius: 8px;
+
+    background: #f6f8fb;
+    color: #596880;
+
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  /* ========================================
+     Balance cards
+  ======================================== */
+
+  .balance-grid {
+    display: grid;
+    grid-template-columns:
+      repeat(auto-fit, minmax(190px, 1fr));
+    gap: 8px;
+  }
+
+  .balance-card {
+    padding: 10px 12px;
+
+    border: 1px solid #dce6fa;
+    border-radius: 10px;
+
+    background:
+      linear-gradient(
+        145deg,
+        #fbfdff,
+        #f5f8ff
+      );
+  }
+
+  .balance-card.negative {
+    border-color: #f4deda;
+
+    background:
+      linear-gradient(
+        145deg,
+        #fffdfd,
+        #fff7f6
+      );
+  }
+
+  .balance-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 5px;
+  }
+
+  .currency-badge {
+    padding: 3px 7px;
+
+    border-radius: 999px;
+
+    background: #e7efff;
+    color: #2457bd;
+
+    font-size: 9px;
+    font-weight: 800;
+  }
+
+  .negative .currency-badge {
+    background: #ffe9e7;
+    color: #d9473b;
+  }
+
+  .balance-top i {
+    padding: 5px;
+
+    border-radius: 50%;
+
+    background: #edf3ff;
+    color: #3b6bd3;
+  }
+
+  .negative .balance-top i {
+    background: #ffebe9;
+    color: #e24a3e;
+  }
+
+  .balance-card > small {
+    display: block;
+
+    color: #7a879e;
+
+    font-size: 9px;
+  }
+
+  .balance-value {
+    margin: 0 0 6px;
+
+    color: #2052ae;
+
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  .negative .balance-value {
+    color: #dc443b;
+  }
+
+  .balance-value em {
+    font-size: 8px;
+    font-style: normal;
+    letter-spacing: 0.03em;
+  }
+
+  .money-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+
+    padding-top: 7px;
+    border-top: 1px solid rgba(117, 137, 180, 0.14);
+
+    direction: rtl;
+  }
+
+  .money-details div {
+    display: grid;
+    grid-template-rows: 14px 18px;
+    align-items: start;
+
+    min-width: 0;
+    padding-inline: 9px;
+  }
+
+  .money-details div + div {
+    border-inline-start:
+      1px solid rgba(117, 137, 180, 0.14);
+  }
+
+  .money-details span {
+    display: block;
+
+    height: 14px;
+
+    color: #8290a8;
+
+    font-size: 8px;
+    line-height: 12px;
+
+    white-space: nowrap;
+  }
+
+  .money-details strong {
+    display: block;
+
+    height: 18px;
+    margin: 0;
+
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    line-height: 18px;
+
+    white-space: nowrap;
+  }
+
+  .money-details div:first-child i {
+    color: #16a36a;
+  }
+
+  .money-details div:last-child i {
+    color: #e36555;
+  }
+
+  /* ========================================
+     Empty financial state
+  ======================================== */
+
+  .empty-balance {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    min-height: 76px;
+
+    border: 1px dashed #d8e0ef;
+    border-radius: 9px;
+
+    color: #77859c;
+  }
+
+  .empty-balance > i {
+    font-size: 20px;
+  }
+
+  .empty-balance div {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .empty-balance span {
+    font-size: 10px;
+  }
+
+  /* ========================================
+     Responsive design
+  ======================================== */
+
+  @media (max-width: 1200px) {
+    .profile-identity {
+      grid-template-columns:
+        minmax(240px, 0.65fr)
+        minmax(440px, 1.35fr);
+
+      gap: 20px;
+      padding-left: 160px;
+    }
+
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+    }
+
+    .name-row h1 {
+      font-size: 23px;
+    }
+  }
+
+  @media (max-width: 1000px) {
+    .profile-hero {
+      padding-top: 62px;
+    }
+
+    .profile-identity {
+      grid-template-columns: 1fr;
+      gap: 17px;
+
+      padding-left: 0;
+    }
+
+    .profile-main {
+      width: 100%;
+    }
+
+    .hero-contact-card {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .profile-hero {
+      padding:
+        62px
+        14px
+        15px;
+    }
+
+    .hero-actions {
+      top: 14px;
+      left: 14px;
+    }
+
+    .profile-main {
+      gap: 13px;
+    }
+
+    .profile-avatar {
+      width: 70px;
+      height: 70px;
+
+      border-radius: 15px;
+    }
+
+    .avatar-fallback {
+      font-size: 27px;
+    }
+
+    .name-row {
+      gap: 7px;
+    }
+
+    .name-row h1 {
+      font-size: 20px;
+    }
+
+    .profile-description {
+      font-size: 10px;
+    }
+
+    .finance-section {
+      padding: 14px;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .profile-hero {
+      border-radius: 12px;
+    }
+
+    .profile-main {
+      align-items: flex-start;
+    }
+
+    .profile-avatar {
+      width: 64px;
+      height: 64px;
+    }
+
+    .name-row h1 {
+      font-size: 18px;
+    }
+
+    .type-pill {
+      padding: 4px 8px;
+      font-size: 9px;
+    }
+
+    .contact-list {
+      grid-template-columns: 1fr;
+    }
+
+    .contact-item {
+      min-height: 52px;
+    }
+
+    .contact-item:nth-child(1),
+    .contact-item:nth-child(2),
+    .contact-item:nth-child(3) {
+      border-inline-end: 0;
+      border-bottom:
+        1px solid rgba(255, 255, 255, 0.13);
+    }
+
+    .contact-item:nth-child(4) {
+      border-bottom: 0;
+    }
+  }
 </style>

@@ -373,8 +373,9 @@
     });
   }
 
-  $: if (form.account_id === WALKIN?.id) {
-    paymentAmount = payableAmount;
+  $: if (form.currency) {
+    paymentCurrency = form.currency;
+    paymentAmount = Math.max(0, Number(payableAmount || 0));
   }
 
   async function saveSale(confirm = false) {
@@ -754,10 +755,11 @@
     });
   }
 
-  let calculatedBalance = '';
-  $: if (form.account_id) {
-    calculatedBalance = '';
+  let calculatedBalance = null;
+  $: if (form.account_id && form.currency && allJournals) {
     calculatedBalance = calculateAccountBalance(form.account_id, form.currency);
+  } else {
+    calculatedBalance = null;
   }
 
   function calculateAccountBalance(accountId, currency) {
@@ -776,16 +778,10 @@
           (balance[currency] || 0) + (Number(j.second_entry_credit || 0) - Number(j.second_entry_debit || 0));
       }
     });
-    console.log('Calculated balance for account', accountId, accounts.length, balance, allJournals.length);
-    return balance.toString
-      ? Object.entries(balance)
-          .map(([cur, amt]) =>
-            cur == currency
-              ? `<span class='text-${amt > 0 ? 'dark' : 'danger'}'>${t('Balance')}: <span dir='ltr'>${amt.toLocaleString(undefined, { maximumFractionDigits: 3 })}</span> ${t(cur)}</span>`
-              : '',
-          )
-          .join('')
-      : '';
+    return {
+      amount: Number(balance[currency] || 0),
+      currency,
+    };
   }
   let form_account_search = '';
   let form_account_search_input = null;
@@ -800,7 +796,9 @@
 
   function positionAccountDropdown() {
     if (!form_account_search_input) return;
-    const rect = form_account_search_input.closest('.position-relative')?.getBoundingClientRect() || form_account_search_input.getBoundingClientRect();
+    const rect =
+      form_account_search_input.closest('.sale-customer-input')?.getBoundingClientRect() ||
+      form_account_search_input.getBoundingClientRect();
     const maxHeight = Math.min(220, window.innerHeight * .4);
     const openUp = window.innerHeight - rect.bottom < maxHeight + 10;
     accountDropdownStyle = openUp
@@ -888,7 +886,25 @@
                   await tick();
                   form_account_search_input?.focus();
                 }}>
-                <span>{getAccountName(form.account_id)}</span>
+                <span class="sale-selected-customer__identity">
+                  <span class="sale-selected-customer__name">
+                    {getAccountName(form.account_id)}
+                  </span>
+
+                  {#if calculatedBalance}
+                    <span class="sale-selected-customer__divider" aria-hidden="true"></span>
+                    <span
+                      class="sale-selected-customer__balance"
+                      class:is-negative={calculatedBalance.amount < 0}>
+                      <b dir="ltr">
+                        {calculatedBalance.amount.toLocaleString(undefined, {
+                          maximumFractionDigits: 3,
+                        })}
+                      </b>
+                      <small>{t(calculatedBalance.currency)}</small>
+                    </span>
+                  {/if}
+                </span>
                 <i class="bi bi-pencil-square" aria-hidden="true"></i>
               </button>
             {:else}
@@ -1158,10 +1174,9 @@
             <i class="bi bi-wallet2"></i>
           </span>
 
-          <div>
-            <h2>{t('Payment Summary')}</h2>
-            <p>{t('Discount')}, {t('Expenses')} &amp; {t('Amount')}</p>
-          </div>
+       
+            <h2>{t('Add Payment')}</h2>
+         
         </div>
 
         {#if second_entry_account == treasury_ID}
@@ -1178,212 +1193,122 @@
       </header>
 
       <div class="sale-payment-body">
-        <div class="sale-payment-summary-grid">
-          <label class="sale-payment-field">
-            <span>{t('Discount')}</span>
-
-            <div class="sale-payment-control sale-discount-control">
-              <button
-                type="button"
-                class="sale-payment-toggle"
-                class:is-active={discount_type === 'percent'}
-                title={t('Discount')}
-                aria-label={t('Discount')}
-                on:click={() => {
-                  if (discount_type === 'percent') {
-                    discount_amount = Number(
-                      total_amount * (discount_amount / 100),
-                    ).toFixed(2);
-                    discount_type = 'fixed';
-                  } else {
-                    discount_amount =
-                      total_amount > 0
-                        ? Number((discount_amount / total_amount) * 100).toFixed(2)
-                        : 0;
-                    discount_type = 'percent';
-                  }
-                }}>
-                <i
-                  class="bi bi-{discount_type === 'fixed'
-                    ? 'cash-stack'
-                    : 'percent'}"
-                  aria-hidden="true"></i>
-              </button>
-
-              <input
-                id="discountAmount"
-                type="number"
-                min="0"
-                step="any"
-                bind:value={discount_amount}
-                placeholder="0.00"
-                on:input={() => {
-                  if (discount_amount === '') {
-                    discount_amount = null;
-                  } else if (discount_amount < 0) {
-                    discount_amount = 0;
-                  } else if (
-                    discount_type === 'fixed' &&
-                    discount_amount > total_amount
-                  ) {
-                    discount_amount = total_amount;
-                  } else if (
-                    discount_type === 'percent' &&
-                    discount_amount > 100
-                  ) {
-                    discount_amount = 100;
-                  } else {
-                    discount_amount = Number(discount_amount);
-                  }
-                }} />
-
-              <span class="sale-payment-suffix">
-                {#if discount_type === 'percent'}
-                  {Number(
-                    (total_amount * Number(discount_amount || 0)) / 100,
-                  ).toLocaleString(undefined, {
-                    maximumFractionDigits: 2,
-                  })}
-                {/if}
-                {t(form.currency || 'AFN')}
-              </span>
-            </div>
-          </label>
-
-          <label class="sale-payment-field">
-            <span>{t('Expenses')}</span>
-
-            <div class="sale-payment-control">
-              <i class="bi bi-receipt-cutoff sale-payment-control__icon" aria-hidden="true"></i>
-
-              <input
-                id="expenseAmount"
-                type="number"
-                min="0"
-                step="any"
-                bind:value={expense_amount}
-                placeholder="0.00"
-                on:input={() => {
-                  if (!expense_amount) {
-                    expense_amount = 0;
-                  } else if (expense_amount < 0) {
-                    expense_amount = 0;
-                  } else {
-                    expense_amount = Number(expense_amount);
-                  }
-                }} />
-
-              <span class="sale-payment-suffix">
-                {t(form.currency || 'AFN')}
-              </span>
-            </div>
-          </label>
-
-          <div class="sale-payable-card" class:is-invalid={payableAmount < 0}>
-            <span class="sale-payable-card__icon">
-              <i
-                class="bi bi-{payableAmount >= 0
-                  ? 'calculator'
-                  : 'exclamation-triangle'}"
-                aria-hidden="true"></i>
+        <section class="sale-payment-panel sale-payment-details-panel">
+          <header class="sale-payment-panel__header">
+            <span class="sale-payment-panel__icon sale-payment-panel__icon--details">
+              <i class="bi bi-receipt" aria-hidden="true"></i>
             </span>
 
-            <span class="sale-payable-card__copy">
-              <small>{payableAmount >= 0 ? t('Payable') : t('Invalid discount')}</small>
+            <div>
+              <h3>{t('Payment Amount')}</h3>
+              <p>{t('Discount')}, {t('Expenses')} &amp; {t('Description')}</p>
+            </div>
+          </header>
 
-              {#if payableAmount >= 0}
-                <strong dir="ltr">
-                  {Number(payableAmount || 0).toLocaleString(undefined, {
-                    maximumFractionDigits: 3,
-                  })}
-                  <em>{t(form.currency || 'AFN')}</em>
-                </strong>
-              {:else}
-                <strong>{t('Invalid discount')}</strong>
-              {/if}
-            </span>
+          <div class="sale-payment-summary-grid">
+            <div class="sale-payment-adjustments">
+            <label class="sale-payment-field">
+              <span>{t('Discount')}</span>
+
+              <div class="sale-payment-control sale-discount-control">
+                <button
+                  type="button"
+                  class="sale-payment-toggle"
+                  class:is-active={discount_type === 'percent'}
+                  title={t('Discount')}
+                  aria-label={t('Discount')}
+                  on:click={() => {
+                    if (discount_type === 'percent') {
+                      discount_amount = Number(
+                        total_amount * (discount_amount / 100),
+                      ).toFixed(2);
+                      discount_type = 'fixed';
+                    } else {
+                      discount_amount =
+                        total_amount > 0
+                          ? Number((discount_amount / total_amount) * 100).toFixed(2)
+                          : 0;
+                      discount_type = 'percent';
+                    }
+                  }}>
+                  <i
+                    class="bi bi-{discount_type === 'fixed'
+                      ? 'cash-stack'
+                      : 'percent'}"
+                    aria-hidden="true"></i>
+                </button>
+
+                <input
+                  id="discountAmount"
+                  type="number"
+                  min="0"
+                  step="any"
+                  bind:value={discount_amount}
+                  placeholder="0.00"
+                  on:input={() => {
+                    if (discount_amount === '') {
+                      discount_amount = null;
+                    } else if (discount_amount < 0) {
+                      discount_amount = 0;
+                    } else if (
+                      discount_type === 'fixed' &&
+                      discount_amount > total_amount
+                    ) {
+                      discount_amount = total_amount;
+                    } else if (
+                      discount_type === 'percent' &&
+                      discount_amount > 100
+                    ) {
+                      discount_amount = 100;
+                    } else {
+                      discount_amount = Number(discount_amount);
+                    }
+                  }} />
+
+                <span class="sale-payment-suffix">
+                  {#if discount_type === 'percent'}
+                    {Number(
+                      (total_amount * Number(discount_amount || 0)) / 100,
+                    ).toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}
+                  {/if}
+                  {t(form.currency || 'AFN')}
+                </span>
+              </div>
+            </label>
+
+            <label class="sale-payment-field">
+              <span>{t('Expenses')}</span>
+
+              <div class="sale-payment-control">
+                <i class="bi bi-receipt-cutoff sale-payment-control__icon" aria-hidden="true"></i>
+
+                <input
+                  id="expenseAmount"
+                  type="number"
+                  min="0"
+                  step="any"
+                  bind:value={expense_amount}
+                  placeholder="0.00"
+                  on:input={() => {
+                    if (!expense_amount) {
+                      expense_amount = 0;
+                    } else if (expense_amount < 0) {
+                      expense_amount = 0;
+                    } else {
+                      expense_amount = Number(expense_amount);
+                    }
+                  }} />
+
+                <span class="sale-payment-suffix">
+                  {t(form.currency || 'AFN')}
+                </span>
+              </div>
+            </label>
           </div>
+
         </div>
-
-        <label class="sale-payment-field">
-          <span>{t('Amount')}</span>
-
-          <div class="sale-payment-amount">
-            <i class="bi bi-cash" aria-hidden="true"></i>
-
-            <input
-              id="paymentAmount"
-              type="number"
-              min="0"
-              step="any"
-              readonly={form.account_id === WALKIN?.id}
-              bind:value={paymentAmount}
-              placeholder="0.00"
-              on:focus={() => {
-                if (paymentAmount === null || paymentAmount === 0) {
-                  paymentAmount = '';
-                }
-              }}
-              on:input={() => {
-                if (paymentAmount === '') {
-                  paymentAmount = null;
-                } else if (paymentAmount < 0) {
-                  paymentAmount = 0;
-                } else if (paymentAmount > getMaxPaymentAmount()) {
-                  paymentAmount = getMaxPaymentAmount();
-                } else {
-                  paymentAmount = Number(paymentAmount);
-                }
-
-                if (second_entry_account == treasury_ID) {
-                  const treasury_balance_for_currency =
-                    treasury_balance[paymentCurrency] || 0;
-
-                  if (paymentAmount > treasury_balance_for_currency * -1) {
-                    paymentAmount = Number(
-                      treasury_balance_for_currency * -1,
-                    ).toFixed(2);
-                  }
-                }
-              }} />
-
-            <div class="payment-currency-picker">
-              <button
-                id="paymentCurrencyDropdown"
-                type="button"
-                class="payment-currency-picker__btn"
-                aria-expanded={showPaymentCurrencyMenu}
-                aria-haspopup="listbox"
-                aria-label={t('Currency')}
-                on:click|stopPropagation={() =>
-                  (showPaymentCurrencyMenu = !showPaymentCurrencyMenu)}>
-                {paymentCurrency
-                  ? t(paymentCurrency)
-                  : t(form.currency || 'AFN')}
-                <i class="bi bi-chevron-down" aria-hidden="true"></i>
-              </button>
-
-              {#if showPaymentCurrencyMenu}
-                <ul class="payment-currency-menu" role="listbox">
-                  {#each currencies as cur (cur.code)}
-                    <li
-                      role="option"
-                      aria-selected={paymentCurrency === cur.code}>
-                      <button
-                        type="button"
-                        class="payment-currency-menu__item"
-                        class:selected={paymentCurrency === cur.code}
-                        on:click|stopPropagation={() =>
-                          selectPaymentCurrency(cur.code)}>
-                        {t(cur.code)}
-                      </button>
-                    </li>
-                  {/each}
-                </ul>
-              {/if}
-            </div>
-          </div>
-        </label>
 
         <label class="sale-payment-field">
           <span>{t('Description')}</span>
@@ -1397,6 +1322,19 @@
               placeholder={t('Description')} />
           </div>
         </label>
+        </section>
+
+        <section class="sale-payment-panel sale-payment-method-panel">
+          <header class="sale-payment-panel__header">
+            <span class="sale-payment-panel__icon sale-payment-panel__icon--method">
+              <i class="bi bi-credit-card" aria-hidden="true"></i>
+            </span>
+
+            <div>
+              <h3>{t('Payment')}</h3>
+              <p>{t('Treasury')} / {t('Track')}</p>
+            </div>
+          </header>
 
         <div class="sale-payment-methods">
           <button
@@ -1490,6 +1428,121 @@
             </span>
           </div>
         {/if}
+        </section>
+
+        <div class="sale-payable-card" class:is-invalid={payableAmount < 0}>
+          <div class="sale-payable-card__overview">
+            <span class="sale-payable-card__copy">
+              <strong>{payableAmount >= 0 ? t('Payable') : t('Invalid discount')}</strong>
+              <small>{t('Payment Amount')}</small>
+            </span>
+
+            {#if payableAmount >= 0}
+              <span class="sale-payable-card__total">
+                <span class="sale-payable-card__icon">
+                  <i class="bi bi-calculator" aria-hidden="true"></i>
+                </span>
+
+                <strong dir="ltr">
+                  {Number(payableAmount || 0).toLocaleString(undefined, {
+                    maximumFractionDigits: 3,
+                  })}
+                </strong>
+                <em>{t(form.currency || 'AFN')}</em>
+              </span>
+            {:else}
+              <span class="sale-payable-card__total">
+                <span class="sale-payable-card__icon">
+                  <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                </span>
+                <strong>{t('Invalid discount')}</strong>
+              </span>
+            {/if}
+          </div>
+
+          {#if payableAmount >= 0}
+            <label class="sale-payable-card__amount">
+              <span>{t('Amount')}</span>
+
+              <div class="sale-payment-amount">
+                <i class="bi bi-cash" aria-hidden="true"></i>
+
+                <input
+                  id="paymentAmount"
+                  type="number"
+                  min="0"
+                  step="any"
+                  readonly={form.account_id === WALKIN?.id}
+                  bind:value={paymentAmount}
+                  placeholder="0.00"
+                  on:focus={() => {
+                    if (paymentAmount === null || paymentAmount === 0) {
+                      paymentAmount = '';
+                    }
+                  }}
+                  on:input={() => {
+                    if (paymentAmount === '') {
+                      paymentAmount = null;
+                    } else if (paymentAmount < 0) {
+                      paymentAmount = 0;
+                    } else if (paymentAmount > getMaxPaymentAmount()) {
+                      paymentAmount = getMaxPaymentAmount();
+                    } else {
+                      paymentAmount = Number(paymentAmount);
+                    }
+
+                    if (second_entry_account == treasury_ID) {
+                      const treasury_balance_for_currency =
+                        treasury_balance[paymentCurrency] || 0;
+
+                      if (paymentAmount > treasury_balance_for_currency * -1) {
+                        paymentAmount = Number(
+                          treasury_balance_for_currency * -1,
+                        ).toFixed(2);
+                      }
+                    }
+                  }} />
+
+                <div class="payment-currency-picker">
+                  <button
+                    id="paymentCurrencyDropdown"
+                    type="button"
+                    class="payment-currency-picker__btn"
+                    aria-expanded={showPaymentCurrencyMenu}
+                    aria-haspopup="listbox"
+                    aria-label={t('Currency')}
+                    on:click|stopPropagation={() =>
+                      (showPaymentCurrencyMenu = !showPaymentCurrencyMenu)}>
+                    {paymentCurrency
+                      ? t(paymentCurrency)
+                      : t(form.currency || 'AFN')}
+                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                  </button>
+
+                  {#if showPaymentCurrencyMenu}
+                    <ul class="payment-currency-menu" role="listbox">
+                      {#each currencies as cur (cur.code)}
+                        <li
+                          role="option"
+                          aria-selected={paymentCurrency === cur.code}>
+                          <button
+                            type="button"
+                            class="payment-currency-menu__item"
+                            class:selected={paymentCurrency === cur.code}
+                            on:click|stopPropagation={() =>
+                              selectPaymentCurrency(cur.code)}>
+                            {t(cur.code)}
+                          </button>
+                        </li>
+                      {/each}
+                    </ul>
+                  {/if}
+                </div>
+              </div>
+            </label>
+          {/if}
+        </div>
+
       </div>
     </section>
   </div>
@@ -1998,6 +2051,8 @@
   /* Details */
 
   .sale-details-grid {
+    --sale-control-height: 2.375rem;
+
     display: grid;
     grid-template-columns:
       minmax(10rem, 1fr)
@@ -2005,14 +2060,15 @@
       minmax(8rem, 0.72fr)
       minmax(10rem, 0.9fr)
       minmax(9rem, 0.82fr);
-    gap: 0.75rem;
-    padding: 0.875rem 1rem 1rem;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem 0.625rem;
   }
 
   .sale-field {
     display: grid;
+    grid-template-rows: 1rem auto;
     align-content: start;
-    gap: 0.3rem;
+    gap: 0.15rem;
     min-width: 0;
   }
 
@@ -2021,6 +2077,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.4rem;
+    height: 1rem;
     min-height: 1rem;
   }
 
@@ -2035,14 +2092,13 @@
   }
 
   .sale-field-label i {
-    color: #8c9aad;
-    font-size: 0.72rem;
+    display: none;
   }
 
   .sale-currency-edit {
     display: inline-grid;
-    width: 1.3rem;
-    height: 1.3rem;
+    width: 1rem;
+    height: 1rem;
     padding: 0;
     place-items: center;
     border: 0;
@@ -2065,8 +2121,13 @@
   }
 
   .sale-details-grid :global(.filter-select__label),
-  .sale-details-grid :global(.filter-label) {
+  .sale-details-grid :global(.filter-label),
+  .sale-details-grid :global(.filter-select__notch) {
     display: none !important;
+  }
+
+  .sale-details-grid :global(.filter-select.outline) {
+    padding-top: 0 !important;
   }
 
   .sale-details-grid :global(.filter-select__control),
@@ -2156,10 +2217,51 @@
     cursor: pointer;
   }
 
-  .sale-selected-customer span {
+  .sale-selected-customer__identity {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .sale-selected-customer__name {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .sale-selected-customer__divider {
+    flex: 0 0 1px;
+    width: 1px;
+    height: 1rem;
+    background: #d6dfeb;
+  }
+
+  .sale-selected-customer__balance {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: baseline;
+    gap: 0.22rem;
+    color: var(--sale-primary);
+    font-size: 0.68rem;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .sale-selected-customer__balance.is-negative {
+    color: #dc2626;
+  }
+
+  .sale-selected-customer__balance b {
+    font: inherit;
+  }
+
+  .sale-selected-customer__balance small {
+    font-size: 0.58rem;
+    font-weight: 750;
   }
 
   .sale-selected-customer i {
@@ -2200,6 +2302,14 @@
     border-radius: 0.75rem;
     background: #ffffff;
     box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .sale-customer-dropdown::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   .sale-customer-dropdown li {
@@ -2487,14 +2597,78 @@
   .sale-payment-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.85rem;
+    padding: 1rem;
+    background: #fbfcfe;
+  }
+
+  .sale-payment-panel {
+    display: grid;
+    align-content: start;
     gap: 0.75rem;
+    min-width: 0;
+    padding: 0.85rem;
+    border: 1px solid #dfe6ef;
+    border-radius: 0.75rem;
+    background: #ffffff;
+  }
+
+  .sale-payment-panel__header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 2.5rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid #edf1f6;
+  }
+
+  .sale-payment-panel__icon {
+    display: inline-grid;
+    flex: 0 0 2.15rem;
+    width: 2.15rem;
+    height: 2.15rem;
+    place-items: center;
+    border-radius: 0.55rem;
+    font-size: 0.85rem;
+  }
+
+  .sale-payment-panel__icon--details {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+
+  .sale-payment-panel__icon--method {
+    background: #edf4ff;
+    color: var(--sale-primary);
+  }
+
+  .sale-payment-panel__header h3 {
+    margin: 0;
+    color: #26364b;
+    font-size: 0.82rem;
+    font-weight: 850;
+    line-height: 1.25;
+  }
+
+  .sale-payment-panel__header p {
+    margin: 0.12rem 0 0;
+    color: #8794a7;
+    font-size: 0.6rem;
+    font-weight: 600;
   }
 
   .sale-payment-summary-grid {
+    display: block;
+    min-width: 0;
+    direction: rtl;
+  }
+
+  .sale-payment-adjustments {
     display: grid;
-    grid-column: 1 / -1;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(11rem, 0.85fr);
-    gap: 0.75rem;
+    align-content: start;
+    gap: 0.65rem;
+    min-width: 0;
+    direction: rtl;
   }
 
   .sale-payment-field {
@@ -2596,14 +2770,49 @@
   }
 
   .sale-payable-card {
+    display: grid;
+    grid-column: 1 / -1;
+    gap: 0;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #cdddf8;
+    border-radius: 0.75rem;
+    background: #f4f8ff;
+    direction: rtl;
+  }
+
+  .sale-payable-card__overview {
     display: flex;
     align-items: center;
-    gap: 0.55rem;
-    min-height: var(--sale-control-height);
-    padding: 0.35rem 0.5rem;
-    border: 1px solid #cce9dc;
-    border-radius: 0.625rem;
-    background: #f2fbf7;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 2.9rem;
+  }
+
+  .sale-payable-card__amount {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    margin-top: 0.65rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid #dbe7fa;
+  }
+
+  .sale-payable-card__amount > span {
+    flex: 0 0 auto;
+    min-width: 3.5rem;
+    color: #526b92;
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+
+  .sale-payable-card__amount .sale-payment-amount {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: var(--sale-control-height);
+    border-color: #cbdaf2;
+    background: #ffffff;
   }
 
   .sale-payable-card.is-invalid {
@@ -2613,13 +2822,14 @@
 
   .sale-payable-card__icon {
     display: inline-grid;
-    flex: 0 0 1.9rem;
-    width: 1.9rem;
-    height: 1.9rem;
+    flex: 0 0 2.3rem;
+    width: 2.3rem;
+    height: 2.3rem;
     place-items: center;
-    border-radius: 0.45rem;
-    background: #ffffff;
-    color: var(--sale-green);
+    border-radius: 0.65rem;
+    background: #e5efff;
+    color: var(--sale-primary);
+    font-size: 0.95rem;
   }
 
   .sale-payable-card.is-invalid .sale-payable-card__icon {
@@ -2629,35 +2839,52 @@
   .sale-payable-card__copy {
     display: grid;
     min-width: 0;
-    gap: 0.02rem;
+    gap: 0.12rem;
   }
 
   .sale-payable-card__copy small {
-    color: #658072;
-    font-size: 0.57rem;
-    font-weight: 700;
+    color: #6d7f9c;
+    font-size: 0.62rem;
+    font-weight: 650;
   }
 
   .sale-payable-card__copy strong {
+    color: #26364b;
+    font-size: 0.9rem;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .sale-payable-card__total {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+    direction: ltr;
+  }
+
+  .sale-payable-card__total > strong {
     overflow: hidden;
-    color: #176a4c;
-    font-size: 0.72rem;
+    color: var(--sale-primary);
+    font-size: 1.35rem;
     font-weight: 900;
+    line-height: 1;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .sale-payable-card.is-invalid .sale-payable-card__copy small,
-  .sale-payable-card.is-invalid .sale-payable-card__copy strong {
-    color: #b42318;
+  .sale-payable-card__total > em {
+    color: #5e7191;
+    font-size: 0.68rem;
+    font-style: normal;
+    font-weight: 800;
+    white-space: nowrap;
   }
 
-  .sale-payable-card__copy em {
-    margin-inline-start: 0.2rem;
-    color: #608272;
-    font-size: 0.58rem;
-    font-style: normal;
-    font-weight: 750;
+  .sale-payable-card.is-invalid .sale-payable-card__copy small,
+  .sale-payable-card.is-invalid .sale-payable-card__copy strong,
+  .sale-payable-card.is-invalid .sale-payable-card__total > strong {
+    color: #b42318;
   }
 
   .payment-currency-picker {
@@ -2723,9 +2950,8 @@
 
   .sale-payment-methods {
     display: grid;
-    grid-column: 1 / -1;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
   }
 
   .sale-payment-method {
@@ -2733,10 +2959,10 @@
     align-items: center;
     gap: 0.6rem;
     min-width: 0;
-    min-height: 4rem;
-    padding: 0.5rem 0.6rem;
+    min-height: 4.5rem;
+    padding: 0.65rem 0.75rem;
     border: 1px solid #dfe6ef;
-    border-radius: 0.7rem;
+    border-radius: 0.65rem;
     background: #ffffff;
     color: #334155;
     text-align: start;
@@ -2754,16 +2980,16 @@
   }
 
   .sale-payment-method.is-active {
-    border-color: #99b9f4;
+    border-color: #5f94f3;
     background: #f4f8ff;
-    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.07);
+    box-shadow: 0 0 0 2px rgba(47, 111, 237, 0.06);
   }
 
   .sale-payment-method__icon {
     display: inline-grid;
-    flex: 0 0 2.35rem;
-    width: 2.35rem;
-    height: 2.35rem;
+    flex: 0 0 2.6rem;
+    width: 2.6rem;
+    height: 2.6rem;
     place-items: center;
     border-radius: 0.6rem;
     font-size: 0.88rem;
@@ -2816,7 +3042,6 @@
 
   .sale-treasury-status {
     display: flex;
-    grid-column: 1 / -1;
     align-items: center;
     gap: 0.4rem;
     min-height: 2.25rem;
@@ -3265,10 +3490,6 @@
       grid-column: span 2;
     }
 
-    .sale-payment-summary-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .sale-payable-card {
       grid-column: 1 / -1;
     }
@@ -3326,21 +3547,33 @@
       padding-inline: 0.8rem;
     }
 
-    .sale-payment-body,
-    .sale-payment-summary-grid {
+    .sale-payment-body {
       grid-template-columns: 1fr;
       padding: 0.8rem;
     }
 
     .sale-payment-summary-grid {
-      grid-column: auto;
       padding: 0;
     }
 
-    .sale-payable-card,
-    .sale-payment-methods,
-    .sale-treasury-status {
-      grid-column: auto;
+    .sale-payment-panel {
+      padding: 0.75rem;
+    }
+
+    .sale-payable-card {
+      grid-column: 1;
+      padding: 0.65rem 0.75rem;
+    }
+
+    .sale-payable-card__amount {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .sale-payable-card__amount .sale-payment-amount {
+      flex-basis: auto;
+      width: 100%;
     }
 
     .sale-actions {

@@ -812,9 +812,7 @@
                   </span>
 
                   <strong>{t('No purchase items added')}</strong>
-                  <p>
-                    {t('Search for a product above and add it to this purchase.')}
-                  </p>
+              
                 </div>
               </td>
             </tr>
@@ -1024,17 +1022,17 @@
       minmax(8rem, 0.28fr)
       minmax(10rem, 0.36fr)
       auto;
-    gap: 0.75rem;
-    align-items: end;
+    gap: 0.5rem;
+    align-items: start;
     margin: 0;
-    padding: 0.875rem 1rem;
+    padding: 0.5rem 0.75rem 0.625rem;
     border-bottom: 1px solid var(--purchase-border-soft);
     background: #fbfcfe;
   }
 
   .purchase-entry-field {
     display: grid;
-    gap: 0.3rem;
+    gap: 0.2rem;
     min-width: 0;
     margin: 0;
   }
@@ -1044,11 +1042,7 @@
   }
 
   .purchase-entry-label {
-    color: #536176;
-    font-size: 0.7rem;
-    font-weight: 750;
-    line-height: 1.25;
-    text-align: start;
+    display: none;
   }
 
   .purchase-product-search,
@@ -1057,7 +1051,7 @@
     display: flex;
     align-items: center;
     min-width: 0;
-    height: 2.625rem;
+    height: 2.375rem;
     border: 1px solid #d6dfeb;
     border-radius: 0.625rem;
     background: #ffffff;
@@ -1163,7 +1157,7 @@
     justify-content: center;
     gap: 0.45rem;
     min-width: 7.5rem;
-    height: 2.625rem;
+    height: 2.375rem;
     padding-inline: 1rem;
     border: 0;
     border-radius: 0.625rem;
@@ -1173,7 +1167,7 @@
     font-weight: 800;
     white-space: nowrap;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(47, 111, 237, 0.2);
+    box-shadow: none;
     transition:
       background 0.15s ease,
       transform 0.15s ease,
@@ -1183,7 +1177,7 @@
   .purchase-search-add-btn:hover:not(:disabled) {
     transform: translateY(-1px);
     background: var(--purchase-primary-dark);
-    box-shadow: 0 6px 16px rgba(47, 111, 237, 0.25);
+    box-shadow: none;
   }
 
   .purchase-search-add-btn:disabled {
@@ -1299,6 +1293,7 @@
   .purchase-items-table-scroll {
     width: 100%;
     max-width: 100%;
+    min-height: 11rem;
     overflow-x: auto !important;
     overflow-y: visible;
     background: #ffffff;
@@ -1943,6 +1938,10 @@
 
     .purchase-items-table {
       min-width: 62rem;
+    }
+
+    .purchase-items-table-scroll {
+      min-height: 10rem;
     }
 
     .purchase-items-total-row {

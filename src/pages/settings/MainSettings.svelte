@@ -1395,8 +1395,20 @@
 
 <style>
   .main-settings-page {
-    width: 100%;
-  }
+  width: 100%;
+  height: 100%;
+  max-height: calc(100dvh - var(--app-header-height, 64px));
+  min-height: 0;
+  padding: 0 4px 24px;
+  box-sizing: border-box;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
 
   .settings-dev-actions {
     display: flex;

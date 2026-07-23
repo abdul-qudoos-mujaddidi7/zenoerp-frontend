@@ -836,8 +836,12 @@
 
         <div class="col-md-2 exchange-amount-field">
           <label class="exchange-field-label">{t('Debit')}</label>
-          <div class="exchange-amount-row">
-            <div class="input-group input-group-sm exchange-unified-input-group exchange-unified-input-group--inline">
+          <div
+            class="exchange-amount-row exchange-amount-row--debit"
+            style="border-color: #e2e8f0 !important; background: #feecec; box-shadow: none !important; outline: none !important;">
+            <div
+              class="input-group input-group-sm exchange-unified-input-group exchange-unified-input-group--inline"
+              style="border-color: transparent !important; background: #feecec; box-shadow: none !important; outline: none !important;">
               <input
                 disabled={!first_currency || !second_currency}
                 type="text"
@@ -845,14 +849,16 @@
                 pattern="[0-9,]*"
                 id="first_entry_debit"
                 class="form-control form-control-sm"
+                style="background: #feecec !important; background-color: #feecec !important; color: #b91c1c; border-color: transparent !important; box-shadow: none !important; outline: none !important;"
                 placeholder={t('Debit')}
                 value={format(first_entry_debit)}
                 on:keydown={onlyNumbers}
                 on:input={(e) => onFirstDebitInput(normalize(e.target.value))} />
             </div>
-            <div class="exchange-currency-picker">
+            <div class="exchange-currency-picker" style="border-inline-start-color: #fecaca;">
               <button
                 class="exchange-currency-picker__btn"
+                style="background: #feecec !important; color: #b91c1c;"
                 type="button"
                 aria-expanded={currencyMenuFor === 'debit'}
                 aria-haspopup="listbox"
@@ -920,8 +926,12 @@
 
         <div class="col-md-2 exchange-amount-field">
           <label class="exchange-field-label">{t('Credit')}</label>
-          <div class="exchange-amount-row">
-            <div class="input-group input-group-sm exchange-unified-input-group exchange-unified-input-group--inline">
+          <div
+            class="exchange-amount-row exchange-amount-row--credit"
+            style="border-color: #e2e8f0 !important; background: #e9f9ef; box-shadow: none !important; outline: none !important;">
+            <div
+              class="input-group input-group-sm exchange-unified-input-group exchange-unified-input-group--inline"
+              style="border-color: transparent !important; background: #e9f9ef; box-shadow: none !important; outline: none !important;">
               <input
                 disabled={!first_currency || !second_currency}
                 type="text"
@@ -929,14 +939,16 @@
                 pattern="[0-9,]*"
                 id="second_entry_credit"
                 class="form-control form-control-sm"
+                style="background: #e9f9ef !important; background-color: #e9f9ef !important; color: #047857; border-color: transparent !important; box-shadow: none !important; outline: none !important;"
                 placeholder={t('Credit')}
                 value={format(second_entry_credit)}
                 on:keydown={onlyNumbers}
                 on:input={(e) => onFirstCreditInput(normalize(e.target.value))} />
             </div>
-            <div class="exchange-currency-picker">
+            <div class="exchange-currency-picker" style="border-inline-start-color: #bbf7d0;">
               <button
                 class="exchange-currency-picker__btn"
+                style="background: #e9f9ef !important; color: #047857;"
                 type="button"
                 aria-expanded={currencyMenuFor === 'credit'}
                 aria-haspopup="listbox"

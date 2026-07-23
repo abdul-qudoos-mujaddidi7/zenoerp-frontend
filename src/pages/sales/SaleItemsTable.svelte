@@ -58,12 +58,16 @@
   }
 
   onMount(async () => {
-    loadAll();
+    await loadAll();
 
     products = await db.products.where('status').equals(1).toArray();
-    products = products.filter((p) => (p.product_status ? p.product_status == 'active' : p.status == 1));
+    products = products.filter((product) =>
+      product.product_status
+        ? product.product_status === 'active'
+        : Number(product.status) === 1,
+    );
 
-    filteredProducts = products;
+    refreshAvailableProducts();
   });
 
   // Build lookup map
@@ -108,6 +112,95 @@
   let filteredProducts = [];
 
   let latestPrice = null;
+  let previousWarehouseId = null;
+
+  function isProductActive(product) {
+    if (!product) return false;
+
+    if (
+      product.product_status !== undefined &&
+      product.product_status !== null
+    ) {
+      return product.product_status === 'active';
+    }
+
+    return (
+      product.status === undefined ||
+      product.status === null ||
+      Number(product.status) === 1
+    );
+  }
+
+  function productMatchesSearch(product, searchValue = '') {
+    const term = String(searchValue || '').trim().toLowerCase();
+
+    if (!term) return true;
+
+    return [
+      product.name,
+      product.code,
+      product.barcode,
+      product.sku,
+      product.product_code,
+    ].some((value) =>
+      String(value || '').toLowerCase().includes(term),
+    );
+  }
+
+  function getProductStock(productId) {
+    if (!warehouse_id || !productId) return 0;
+
+    return warehouse_products
+      .filter((warehouseProduct) => {
+        const active =
+          warehouseProduct.status === undefined ||
+          warehouseProduct.status === null ||
+          Number(warehouseProduct.status) === 1;
+
+        return (
+          active &&
+          Number(warehouseProduct.product_id) === Number(productId) &&
+          Number(warehouseProduct.warehouse_id) === Number(warehouse_id)
+        );
+      })
+      .reduce((sum, warehouseProduct) => {
+        const rowQuantity = Number(
+          warehouseProduct.quantity ??
+            warehouseProduct.current_quantity ??
+            warehouseProduct.available_quantity ??
+            warehouseProduct.stock ??
+            0,
+        );
+
+        return sum + (Number.isFinite(rowQuantity) ? rowQuantity : 0);
+      }, 0);
+  }
+
+  function getAvailableProducts(searchValue = '') {
+    if (!warehouse_id) return [];
+
+    return products
+      .filter((product) => {
+        if (!isProductActive(product)) return false;
+        if (!productMatchesSearch(product, searchValue)) return false;
+
+        // Services do not use warehouse stock.
+        if (product.type === 'service') return true;
+
+        return getProductStock(product.id) > 0;
+      })
+      .map((product) => ({
+        ...product,
+        warehouse_stock:
+          product.type === 'service'
+            ? null
+            : getProductStock(product.id),
+      }));
+  }
+
+  function refreshAvailableProducts() {
+    filteredProducts = getAvailableProducts(search);
+  }
 
   async function findLatestSalesPrice(productId) {
     const customerSales = await db.sales.where('account_id').equals(selected_account_id).reverse().toArray();
@@ -135,32 +228,71 @@
     return latestPrice;
   }
 
-  function selectProduct(product) {
-    selectedProduct = product;
-    const unitHierarchy = getUnitHierarchy(product.product_unit_id);
-    search = product.name;
-    unit_price = Number(product.sell_price) || 0;
-    unit_currency = product.sell_currency || currency.code;
-    unit = product.product_unit_id;
-    showDropdown = false;
-    selectedProduct.availableUnits = unitHierarchy;
-    console.log('Refreshing stock for product', product.id, 'in warehouse', warehouse_id);
-    // Ensure stock is recalculated and fresh data is loaded before showing available quantity
-    (async () => {
+  async function selectProduct(product) {
+    if (!product) return false;
+
+    if (!warehouse_id) {
+      toast.warning(t('Please select a warehouse first.'));
+      return false;
+    }
+
+    showProductDropdown = false;
+
+    if (product.type !== 'service') {
       try {
         await calculateProductStock(Number(product.id));
-      } catch (e) {
-        console.warn('Failed to calculate product stock:', e);
+      } catch (error) {
+        console.warn('Failed to calculate product stock:', error);
       }
-      warehouse_products = await db.warehouse_products.where('status').equals(1).toArray();
-      stock =
-        warehouse_products.find((wp) => wp.product_id === product.id && wp.warehouse_id === warehouse_id)?.quantity ||
-        0;
-    })();
+
+      warehouse_products = await db.warehouse_products
+        .where('status')
+        .equals(1)
+        .toArray();
+
+      const availableStock = getProductStock(product.id);
+
+      if (availableStock <= 0) {
+        selectedProduct = null;
+        stock = 0;
+        search = '';
+        refreshAvailableProducts();
+
+        toast.error(
+          t('Product is out of stock in the selected warehouse.'),
+        );
+
+        return false;
+      }
+
+      stock = availableStock;
+    } else {
+      stock = 0;
+    }
+
+    const unitHierarchy = getUnitHierarchy(product.product_unit_id);
+
+    selectedProduct = {
+      ...product,
+      availableUnits: unitHierarchy,
+      warehouse_stock:
+        product.type === 'service'
+          ? null
+          : getProductStock(product.id),
+    };
+
+    search = product.name;
+    unit_price = Number(product.sell_price) || 0;
+    unit_currency =
+      product.sell_currency || currency?.code || currency || 'AFN';
+    unit = product.product_unit_id;
+
     if (enable_show_latest_sale_price) {
       latestPrice = null;
-      findLatestSalesPrice(product.id);
+      await findLatestSalesPrice(product.id);
     }
+
+    return true;
   }
 
   function addItem() {
@@ -287,14 +419,30 @@
   }
 
   async function processBarcode(code) {
+    if (!warehouse_id) {
+      toast.warning(t('Please select a warehouse first.'));
+      return;
+    }
+
     const product = await db.products
       .where('code')
       .equals(code)
-      .and((p) => (p.product_status ? p.product_status == 'active' : true) && p.status == 1)
+      .and(
+        (item) =>
+          (item.product_status
+            ? item.product_status === 'active'
+            : true) &&
+          Number(item.status) === 1,
+      )
       .first();
+
     if (!product) return;
-    selectProduct(product);
-    addItem();
+
+    const selected = await selectProduct(product);
+
+    if (selected) {
+      addItem();
+    }
   }
 
   function exchangeRate(amount, fromCurrencyCode, toCurrencyCode) {
@@ -321,12 +469,6 @@
     }
   }, 0);
 
-  function getProductStock(productId) {
-    return (
-      warehouse_products.find((wp) => wp.product_id === productId && wp.warehouse_id === warehouse_id)?.quantity || 0
-    );
-  }
-
   let search_input = null;
 
   let showProductDropdown = false;
@@ -348,7 +490,46 @@
       : `position:fixed;left:${rect.left}px;width:${width}px;top:${rect.bottom + 5}px;bottom:auto;max-height:${maxHeight}px;overflow:auto;z-index:100000;`;
   }
 
-  $: if (showProductDropdown) tick().then(positionProductDropdown);
+  $: {
+    // Explicit dependencies so the list refreshes after Dexie reloads.
+    products;
+    warehouse_products;
+    search;
+
+    const currentWarehouseId = warehouse_id
+      ? Number(warehouse_id)
+      : null;
+
+    if (currentWarehouseId !== previousWarehouseId) {
+      previousWarehouseId = currentWarehouseId;
+
+      search = '';
+      selectedProduct = null;
+      stock = 0;
+      quantity = 1;
+      unit_price = 0;
+      unit_currency = '';
+      unit = 0;
+      latestPrice = null;
+      showProductDropdown = false;
+    }
+
+    filteredProducts = getAvailableProducts(search);
+
+    if (
+      selectedProduct &&
+      selectedProduct.type !== 'service' &&
+      getProductStock(selectedProduct.id) <= 0
+    ) {
+      selectedProduct = null;
+      search = '';
+      stock = 0;
+    }
+  }
+
+  $: if (showProductDropdown) {
+    tick().then(positionProductDropdown);
+  }
 </script>
 <div class="card shadow-2 mt-4 purchase-items-card">
   <div class="card-body">
@@ -370,35 +551,28 @@
             id="form_product_search"
             bind:this={search_input}
             bind:value={search}
+            disabled={!warehouse_id}
             on:input={() => {
               showProductDropdown = true;
-              filteredProducts = products.filter((prod) => {
-                const name = prod.name || '';
-                const code = prod.code || '';
-                return (
-                  name.toLowerCase().includes(search.trim().toLowerCase()) ||
-                  code.toLowerCase().includes(search.trim().toLowerCase())
-                );
-              });
-              if (!search.trim()) selectedProduct = null;
-            }}
-            on:focus={() => {
-              showProductDropdown = true;
-              if (search.trim()) {
-                filteredProducts = products.filter((prod) => {
-                  const name = prod.name || '';
-                  const code = prod.code || '';
-                  return (
-                    name.toLowerCase().includes(search.trim().toLowerCase()) ||
-                    code.toLowerCase().includes(search.trim().toLowerCase())
-                  );
-                });
-              } else {
-                filteredProducts = products;
+              refreshAvailableProducts();
+
+              if (!search.trim()) {
+                selectedProduct = null;
               }
             }}
-            on:blur={() => setTimeout(() => (showProductDropdown = false), 150)}
-            placeholder={t('Search product by name, barcode, or SKU...')}
+            on:focus={() => {
+              if (!warehouse_id) return;
+
+              showProductDropdown = true;
+              refreshAvailableProducts();
+            }}
+            on:blur={() =>
+              setTimeout(() => {
+                showProductDropdown = false;
+              }, 150)}
+            placeholder={warehouse_id
+              ? t('Search product by name, barcode, or SKU...')
+              : t('Select Warehouse')}
             autocomplete="off" />
 
           <button
@@ -416,20 +590,75 @@
             use:portal
             class="list-group shadow purchase-items-dropdown"
             style={productDropdownStyle}>
-            {#each filteredProducts as prod}
+            {#each filteredProducts as prod (prod.id)}
               <button
                 type="button"
                 class="list-group-item list-group-item-action"
-                on:mousedown={() => {
-                  selectProduct(prod);
+                on:mousedown={async () => {
+                  await selectProduct(prod);
                   showProductDropdown = false;
                 }}>
-                <div class="d-flex justify-content-between">
-                  <span>{prod.name}</span>
-                  <small>{categories.find((c) => c.id === prod.category_id)?.name || t('Category')}</small>
+                <div class="sale-product-option">
+                  <span class="sale-product-option__copy">
+                    <strong>{prod.name}</strong>
+
+                    <small>
+                      {categories.find(
+                        (category) => category.id === prod.category_id,
+                      )?.name || t('Category')}
+                    </small>
+                  </span>
+
+                  {#if prod.type === 'service'}
+                    <span class="sale-product-option__service">
+                      <i class="bi bi-tools" aria-hidden="true"></i>
+                      {t('Service')}
+                    </span>
+                  {:else}
+                    <span
+                      class="sale-product-option__stock"
+                      title={t('Present in Warehouse')}>
+                      <i class="bi bi-box-seam" aria-hidden="true"></i>
+
+                      <strong dir="ltr">
+                        {Number(
+                          prod.warehouse_stock || 0,
+                        ).toLocaleString(undefined, {
+                          maximumFractionDigits: 3,
+                        })}
+                      </strong>
+
+                      <small>
+                        {units.find(
+                          (item) => item.id === prod.product_unit_id,
+                        )?.name || t('Unit')}
+                      </small>
+                    </span>
+                  {/if}
                 </div>
               </button>
             {/each}
+          </div>
+        {/if}
+
+        {#if
+          showProductDropdown &&
+          warehouse_id &&
+          search.trim() &&
+          filteredProducts.length === 0}
+          <div
+            use:portal
+            class="purchase-items-dropdown sale-product-empty"
+            style={productDropdownStyle}>
+            <span class="sale-product-empty__icon" aria-hidden="true">
+              <i class="bi bi-box-seam"></i>
+            </span>
+
+            <strong>{t('No products available')}</strong>
+
+            <small>
+              {t('No stock is available in the selected warehouse.')}
+            </small>
           </div>
         {/if}
 
@@ -631,27 +860,70 @@
   {warehouse_products}
   on:saved={async () => {
     products = await db.products.where('status').equals(1).toArray();
-    products = products.filter((p) => (p.product_status ? p.product_status == 'active' : p.status == 1));
-    warehouse_products = await db.warehouse_products.where('status').equals(1).toArray();
+
+    products = products.filter((product) =>
+      product.product_status
+        ? product.product_status === 'active'
+        : Number(product.status) === 1,
+    );
+
+    warehouse_products = await db.warehouse_products
+      .where('status')
+      .equals(1)
+      .toArray();
+
+    refreshAvailableProducts();
+
     const newProduct = products[products.length - 1];
-    if (newProduct) {
-      items.push({
-        type: newProduct.type || 'good',
-        product_id: newProduct.id,
-        product_name: newProduct.name,
-        product_unit_id: newProduct.product_unit_id,
-        currency: newProduct.sell_currency || currency.code,
-        quantity: 1,
-        latestPrice: null,
-        buy_price: newProduct.buy_price,
-        buy_price_currency: newProduct.buy_currency || currency.code,
-        unit_price: Number(newProduct.sell_price) || 0,
-        calculated_price: Number(newProduct.sell_price) || 0,
-        subtotal: Number(newProduct.sell_price) || 0,
-      });
-      items = [...items];
-      dispatch('update', { items });
+
+    if (!newProduct) return;
+
+    const availableStock =
+      newProduct.type === 'service'
+        ? null
+        : getProductStock(newProduct.id);
+
+    if (
+      newProduct.type !== 'service' &&
+      Number(availableStock || 0) <= 0
+    ) {
+      toast.warning(
+        t('The new product has no stock in the selected warehouse.'),
+      );
+      return;
     }
+
+    const availableUnits = getUnitHierarchy(
+      newProduct.product_unit_id,
+    );
+
+    items.push({
+      type: newProduct.type || 'good',
+      product_id: newProduct.id,
+      product_name: newProduct.name,
+      product_unit_id: newProduct.product_unit_id,
+      currency:
+        newProduct.sell_currency ||
+        currency?.code ||
+        currency ||
+        'AFN',
+      quantity: 1,
+      latestPrice: null,
+      buy_price: newProduct.buy_price,
+      buy_price_currency:
+        newProduct.buy_currency ||
+        currency?.code ||
+        currency ||
+        'AFN',
+      unit_price: Number(newProduct.sell_price) || 0,
+      calculated_price: Number(newProduct.sell_price) || 0,
+      subtotal: Number(newProduct.sell_price) || 0,
+      availableUnits,
+      warehouse_stock: availableStock,
+    });
+
+    items = [...items];
+    dispatch('update', { items });
   }} />
 
 <style>
@@ -737,9 +1009,9 @@
       minmax(8.5rem, max-content)
       auto;
     align-items: start;
-    gap: 0.75rem;
+    gap: 0.5rem;
     margin: 0 !important;
-    padding: 0.875rem 1rem;
+    padding: 0.5rem 0.75rem 0.625rem;
     border-bottom: 1px solid var(--sale-border-soft);
     background: #fbfcfe;
   }
@@ -765,8 +1037,8 @@
     align-items: stretch;
     width: 100%;
     min-width: 0;
-    height: 2.625rem;
-    min-height: 2.625rem;
+    height: 2.375rem;
+    min-height: 2.375rem;
     overflow: hidden;
     border: 1px solid #d6dfeb;
     border-radius: 0.625rem;
@@ -882,8 +1154,8 @@
     justify-content: center;
     min-width: 7.5rem;
     width: 100%;
-    height: 2.625rem;
-    min-height: 2.625rem;
+    height: 2.375rem;
+    min-height: 2.375rem;
     padding: 0 1rem;
     border: 0;
     border-radius: 0.625rem;
@@ -961,6 +1233,7 @@
   .purchase-items-card :global(.table-responsive) {
     width: 100%;
     max-width: 100%;
+    min-height: 11rem;
     overflow-x: auto !important;
     overflow-y: visible;
     border: 0;
@@ -989,7 +1262,7 @@
     border: 0;
     border-collapse: separate;
     border-spacing: 0;
-    table-layout: auto;
+    table-layout: fixed;
     color: #42516a;
   }
 
@@ -1043,9 +1316,9 @@
     vertical-align: middle;
   }
 
-  /* Product column receives remaining width. */
+  /* Keep product dominant while reserving useful space for editable columns. */
   .purchase-item-col-product {
-    width: auto;
+    width: 58%;
     min-width: 15rem;
   }
 
@@ -1108,18 +1381,28 @@
     white-space: nowrap;
   }
 
-  /* Tight content-sized data columns. */
-  .purchase-item-col-quantity,
-  .purchase-item-col-price,
-  .purchase-item-col-subtotal,
-  .purchase-item-col-actions {
-    width: 1%;
-    min-width: 0;
+  .purchase-item-col-quantity {
+    width: 14%;
+    min-width: 8.5rem;
+    white-space: nowrap;
+  }
+
+  .purchase-item-col-price {
+    width: 14%;
+    min-width: 8.5rem;
+    white-space: nowrap;
+  }
+
+  .purchase-item-col-subtotal {
+    width: 9%;
+    min-width: 7rem;
     white-space: nowrap;
   }
 
   .purchase-item-col-actions {
-    min-width: 3.5rem;
+    width: 5%;
+    min-width: 4rem;
+    white-space: nowrap;
   }
 
   /* Editable fields */
@@ -1364,9 +1647,137 @@
       min-width: 42rem;
     }
 
+    .purchase-items-card :global(.table-responsive) {
+      min-height: 10rem;
+    }
+
     .purchase-items-total-row {
       padding-inline: 0.8rem;
     }
   }
+
+
+  /* Product search results with available warehouse stock */
+  :global(.purchase-items-dropdown .sale-product-option) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    min-width: 0;
+  }
+
+  :global(.purchase-items-dropdown .sale-product-option__copy) {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.1rem;
+    text-align: start;
+  }
+
+  :global(.purchase-items-dropdown .sale-product-option__copy strong) {
+    overflow: hidden;
+    color: #26364b;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.purchase-items-dropdown .sale-product-option__copy small) {
+    overflow: hidden;
+    color: #8491a4;
+    font-size: 0.63rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.purchase-items-dropdown .sale-product-option__stock) {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: baseline;
+    gap: 0.25rem;
+    min-height: 1.75rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #cce9dc;
+    border-radius: 0.45rem;
+    background: #f2fbf7;
+    color: #087a54;
+    white-space: nowrap;
+  }
+
+  :global(.purchase-items-dropdown .sale-product-option__stock i) {
+    font-size: 0.68rem;
+  }
+
+  :global(.purchase-items-dropdown .sale-product-option__stock strong) {
+    color: #087a54;
+    font-size: 0.7rem;
+    font-weight: 850;
+  }
+
+  :global(.purchase-items-dropdown .sale-product-option__stock small) {
+    color: #54806c !important;
+    font-size: 0.57rem !important;
+    font-weight: 700;
+  }
+
+  :global(.purchase-items-dropdown .sale-product-option__service) {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 1.7rem;
+    padding-inline: 0.5rem;
+    border: 1px solid #d8e4f8;
+    border-radius: 999px;
+    background: #f3f7fe;
+    color: #2f6fed;
+    font-size: 0.6rem;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  :global(.sale-product-empty) {
+    display: grid;
+    min-height: 7.5rem;
+    place-items: center;
+    align-content: center;
+    gap: 0.3rem;
+    padding: 1rem;
+    color: #8491a4;
+    text-align: center;
+  }
+
+  :global(.sale-product-empty__icon) {
+    display: inline-grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: 0.625rem;
+    background: #f1f5f9;
+    color: #94a3b8;
+    font-size: 1rem;
+  }
+
+  :global(.sale-product-empty strong) {
+    color: #526176;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+
+  :global(.sale-product-empty small) {
+    color: #8491a4;
+    font-size: 0.63rem;
+    font-weight: 600;
+  }
+
+  #form_product_search:disabled {
+    background: #f7f9fc !important;
+    color: #94a3b8;
+    cursor: not-allowed;
+  }
+
 </style>
 

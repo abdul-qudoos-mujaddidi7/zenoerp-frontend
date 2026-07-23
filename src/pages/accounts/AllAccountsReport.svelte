@@ -1,5 +1,6 @@
 <script>
     import { onMount } from "svelte";
+    import { liveQuery } from "dexie";
     import { db, logActivity } from "../../db.js";
     import { showDate, setDatePickers } from "../../calendar.js";
     import {calculateCreditDebitOfAllAccounts} from './AccountsHelper.js';
@@ -31,6 +32,7 @@
     let typeDropdownEl;
     let balDropdownEl;
     let groupDropdownEl;
+    let balanceSubscription = null;
 
 
 
@@ -61,12 +63,32 @@
         loading = false;
     }
 
+    function applyAccountBalances(accountBalances) {
+        accounts = accounts.map((account) => ({
+            ...account,
+            computedBalances: accountBalances[account.id],
+        }));
+    }
+
+    function watchAccountBalances() {
+        balanceSubscription?.unsubscribe();
+        balanceSubscription = liveQuery(() => calculateCreditDebitOfAllAccounts()).subscribe({
+            next: applyAccountBalances,
+            error: (error) => console.error("Failed to refresh accounts report balances", error),
+        });
+    }
+
     onMount(() => {
-        loadAccounts();
+        let destroyed = false;
+        loadAccounts().then(() => {
+            if (!destroyed) watchAccountBalances();
+        });
 
         document.addEventListener("click", handleClickOutside);
 
         return () => {
+            destroyed = true;
+            balanceSubscription?.unsubscribe();
             document.removeEventListener("click", handleClickOutside);
         };
     });
@@ -441,9 +463,9 @@
         currentPage = 1;
     }
 
-    function formatOverallSummary(type) {
-        if (!overallBalanceArray.length) return '0';
-        return overallBalanceArray.map((item) => {
+    function formatOverallSummary(balances, type) {
+        if (!balances.length) return '0';
+        return balances.map((item) => {
             let value = 0;
             if (type === 'credit') value = Number(item.credit || 0);
             if (type === 'debit') value = Number(item.debit || 0);
@@ -498,13 +520,13 @@
     <svelte:fragment slot="stats">
         <div class="index-summary-grid">
             <SummaryCard label={t('Credit')} icon="bi-arrow-down-left" tone="green">
-                {@html formatOverallSummary('credit')}
+                {@html formatOverallSummary(overallBalanceArray, 'credit')}
             </SummaryCard>
             <SummaryCard label={t('Debit')} icon="bi-arrow-up-right" tone="amber">
-                {@html formatOverallSummary('debit')}
+                {@html formatOverallSummary(overallBalanceArray, 'debit')}
             </SummaryCard>
             <SummaryCard label={t('Balance')} icon="bi-wallet2" tone="cyan">
-                {@html formatOverallSummary('balance')}
+                {@html formatOverallSummary(overallBalanceArray, 'balance')}
             </SummaryCard>
         </div>
     </svelte:fragment>

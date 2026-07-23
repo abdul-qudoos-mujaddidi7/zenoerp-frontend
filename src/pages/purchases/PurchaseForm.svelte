@@ -602,10 +602,11 @@
   }
 
   let showAccountModal = false;
-  let calculatedBalance = '';
-  $: if (form.account_id) {
-    calculatedBalance = '';
+  let calculatedBalance = null;
+  $: if (form.account_id && form.currency && allJournals) {
     calculatedBalance = calculateAccountBalance(form.account_id, form.currency);
+  } else {
+    calculatedBalance = null;
   }
 
   function calculateAccountBalance(accountId, currency) {
@@ -624,16 +625,10 @@
           (balance[currency] || 0) + (Number(j.second_entry_credit || 0) - Number(j.second_entry_debit || 0));
       }
     });
-    console.log('Calculated balance for account', accountId, accounts.length, balance, allJournals.length);
-    return balance.toString
-      ? Object.entries(balance)
-          .map(([cur, amt]) =>
-            cur == currency
-              ? `<span class='text-${amt > 0 ? 'dark' : 'danger'}'>${t('Balance')}: <span dir='ltr'>${amt.toLocaleString(undefined, { maximumFractionDigits: 3 })}</span> ${t(cur)}</span>`
-              : '',
-          )
-          .join('')
-      : '';
+    return {
+      amount: Number(balance[currency] || 0),
+      currency,
+    };
   }
   let form_account_search = '';
   let form_account_search_input = null;
@@ -729,7 +724,25 @@
                   await tick();
                   form_account_search_input?.focus();
                 }}>
-                <span>{getAccountName(form.account_id)}</span>
+                <span class="purchase-selected-supplier__identity">
+                  <span class="purchase-selected-supplier__name">
+                    {getAccountName(form.account_id)}
+                  </span>
+
+                  {#if calculatedBalance}
+                    <span class="purchase-selected-supplier__divider" aria-hidden="true"></span>
+                    <span
+                      class="purchase-selected-supplier__balance"
+                      class:is-negative={calculatedBalance.amount < 0}>
+                      <b dir="ltr">
+                        {calculatedBalance.amount.toLocaleString(undefined, {
+                          maximumFractionDigits: 3,
+                        })}
+                      </b>
+                      <small>{t(calculatedBalance.currency)}</small>
+                    </span>
+                  {/if}
+                </span>
                 <i class="bi bi-pencil-square" aria-hidden="true"></i>
               </button>
             {:else}
@@ -1651,6 +1664,8 @@
   /* Details */
 
   .purchase-details-grid {
+    --purchase-control-height: 2.375rem;
+
     display: grid;
     grid-template-columns:
       minmax(10rem, 1fr)
@@ -1658,14 +1673,15 @@
       minmax(8rem, 0.72fr)
       minmax(10rem, 0.9fr)
       minmax(8rem, 0.72fr);
-    gap: 0.75rem;
-    padding: 0.875rem 1rem 1rem;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem 0.625rem;
   }
 
   .purchase-field {
     display: grid;
+    grid-template-rows: 1rem auto;
     align-content: start;
-    gap: 0.3rem;
+    gap: 0.15rem;
     min-width: 0;
   }
 
@@ -1680,8 +1696,7 @@
   }
 
   .purchase-field-label i {
-    color: #8c9aad;
-    font-size: 0.72rem;
+    display: none;
   }
 
   .purchase-details-grid :global(.filter-select) {
@@ -1691,8 +1706,13 @@
   }
 
   .purchase-details-grid :global(.filter-select__label),
-  .purchase-details-grid :global(.filter-label) {
+  .purchase-details-grid :global(.filter-label),
+  .purchase-details-grid :global(.filter-select__notch) {
     display: none !important;
+  }
+
+  .purchase-details-grid :global(.filter-select.outline) {
+    padding-top: 0 !important;
   }
 
   .purchase-details-grid :global(.filter-select__control),
@@ -1782,10 +1802,51 @@
     cursor: pointer;
   }
 
-  .purchase-selected-supplier span {
+  .purchase-selected-supplier__identity {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .purchase-selected-supplier__name {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .purchase-selected-supplier__divider {
+    flex: 0 0 1px;
+    width: 1px;
+    height: 1rem;
+    background: #d6dfeb;
+  }
+
+  .purchase-selected-supplier__balance {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: baseline;
+    gap: 0.22rem;
+    color: var(--purchase-primary);
+    font-size: 0.68rem;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .purchase-selected-supplier__balance.is-negative {
+    color: #dc2626;
+  }
+
+  .purchase-selected-supplier__balance b {
+    font: inherit;
+  }
+
+  .purchase-selected-supplier__balance small {
+    font-size: 0.58rem;
+    font-weight: 750;
   }
 
   .purchase-selected-supplier i {
@@ -1826,6 +1887,12 @@
     border-radius: 0.75rem;
     background: #ffffff;
     box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .purchase-supplier-dropdown::-webkit-scrollbar {
+    display: none;
   }
 
   .purchase-supplier-dropdown li {
