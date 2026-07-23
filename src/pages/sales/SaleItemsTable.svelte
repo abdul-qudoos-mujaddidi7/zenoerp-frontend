@@ -730,7 +730,7 @@
       </div>
     </div>
 
-    <div class="table-responsive">
+    <div class="table-responsive sale-items-scroll-area">
       <table class="table table-hover align-middle purchase-items-table">
         <thead class="table-light">
           <tr>
@@ -839,13 +839,7 @@
       </table>
     </div>
 
-    <div class="text-end mt-3 purchase-items-total-row">
-      <h5 class="mb-0">
-        {t('Total')}:
-        <span class="text-primary"
-          >{total.toLocaleString(undefined, { maximumFractionDigits: 3 })} {t(currency?.code)}</span>
-      </h5>
-    </div>
+    
   </div>
 </div>
 
@@ -1235,14 +1229,28 @@
     max-width: 100%;
     min-height: 11rem;
     overflow-x: auto !important;
-    overflow-y: visible;
+    overflow-y: auto !important;
     border: 0;
     background: #ffffff;
     scrollbar-width: thin;
     scrollbar-color: #b9c5d5 transparent;
   }
 
+  /*
+   * Show the table header plus five sale-item rows.
+   * A vertical scrollbar appears automatically from the sixth item onward.
+   *
+   * Header: 2.875rem
+   * Five rows: 5 × 4.25rem = 21.25rem
+   */
+  .purchase-items-card :global(.sale-items-scroll-area) {
+    max-height: calc(2.875rem + 21.25rem + 1px);
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
   .purchase-items-card :global(.table-responsive::-webkit-scrollbar) {
+    width: 0.45rem;
     height: 0.45rem;
   }
 
@@ -1253,6 +1261,10 @@
   .purchase-items-card :global(.table-responsive::-webkit-scrollbar-thumb) {
     border-radius: 999px;
     background: #b9c5d5;
+  }
+
+  .purchase-items-card :global(.table-responsive::-webkit-scrollbar-thumb:hover) {
+    background: #94a3b8;
   }
 
   .purchase-items-table {

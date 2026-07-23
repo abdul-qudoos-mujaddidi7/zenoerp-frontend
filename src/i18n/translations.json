@@ -515,7 +515,7 @@
     "Purchase Receipt": "رسید خرید",
     "Sale Receipt": "رسید فروش",
     "Amount": "مبلغ",
-    "Add Payment": "ایجاد پرداخت",
+    "Add Payment": " پرداخت",
     "Payments": "پرداخت‌ها",
     "No payments found.": "هیچ پرداختی یافت نشد.",
     "No payments recorded.": "هیچ پرداختی ثبت نشده",
@@ -1239,7 +1239,7 @@
 
     "Receive": "دریافت",
 
-    "Payment": "پرداخت",
+    "Payment": "شیوه پرداخت ",
 
     "Received": "رسید",
     "Withdrawal": "برداشت",

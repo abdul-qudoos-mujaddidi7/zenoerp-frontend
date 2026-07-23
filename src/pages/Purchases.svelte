@@ -30,6 +30,8 @@
   let showSummaryCards = false;
   let accounts = [];
   let warehouses = [];
+  let purchase_payments = [];
+  let purchase_returns = [];
 
   let searchTerm = '';
   let filterStatus = 'all';
@@ -114,6 +116,8 @@
   async function load() {
     loading = true;
     purchases = await db.purchases.orderBy('bill_date').reverse().toArray();
+    purchase_payments = await db.purchase_payments.where('status').equals(1).toArray();
+    purchase_returns = await db.purchase_returns.where('status').equals(1).toArray();
     accounts = await db.accounts.where({ status: 1, account_type_id: 3 }).toArray();
     warehouses = await db.warehouses.where('status').equals(1).toArray();
     purchases = purchases.filter((s) => s.status == 1);
@@ -191,6 +195,82 @@
     totals[p.currency] += Number(p.total_amount);
     return totals;
   }, {});
+
+  // Sum payments for purchases currently in the filtered list (grouped by currency)
+  $: totalPaymentsAmount = (() => {
+    const totals = {};
+    if (!purchase_payments || purchase_payments.length === 0) return totals;
+    const purchaseIds = new Set(filteredPurchases.filter(p => p.bill_status === 'confirmed').map(p => p.id));
+    for (const pp of purchase_payments) {
+      if (!purchaseIds.has(pp.purchase_id)) continue;
+      if (!totals[pp.currency]) totals[pp.currency] = 0;
+      totals[pp.currency] += Number(pp.amount || 0);
+    }
+    return totals;
+  })();
+
+  // Sum returns for purchases currently in the filtered list (grouped by currency)
+  $: totalReturnsAmount = (() => {
+    const totals = {};
+    if (!purchase_returns || purchase_returns.length === 0) return totals;
+    const purchaseIds = new Set(filteredPurchases.filter(p => p.bill_status === 'confirmed').map(p => p.id));
+    for (const r of purchase_returns) {
+      if (!purchaseIds.has(r.purchase_id)) continue;
+      if (!totals[r.currency]) totals[r.currency] = 0;
+      totals[r.currency] += Number(r.total_amount || 0);
+    }
+    return totals;
+  })();
+
+  // Aggregate payments by purchase id
+  $: paymentsByPurchase = (() => {
+    const map = {};
+    if (!purchase_payments || purchase_payments.length === 0) return map;
+    for (const pp of purchase_payments) {
+      if (!map[pp.purchase_id]) map[pp.purchase_id] = 0;
+      map[pp.purchase_id] += Number(pp.amount || 0);
+    }
+    return map;
+  })();
+
+  // Aggregate returns by purchase id
+  $: returnsByPurchase = (() => {
+    const map = {};
+    if (!purchase_returns || purchase_returns.length === 0) return map;
+    for (const r of purchase_returns) {
+      if (!map[r.purchase_id]) map[r.purchase_id] = 0;
+      map[r.purchase_id] += Number(r.total_amount || 0);
+    }
+    return map;
+  })();
+
+  // Remaining amount per purchase (in purchase currency)
+  $: purchaseRemainingMap = (() => {
+    const map = {};
+    for (const p of purchases || []) {
+      const paid = Number(paymentsByPurchase?.[p.id] || 0);
+      const ret = Number(returnsByPurchase?.[p.id] || 0);
+      map[p.id] = Number(p.total_amount || 0) - paid - ret;
+    }
+    return map;
+  })();
+
+  // Remaining balance per currency = purchases - payments - returns
+  $: remainingBalance = (() => {
+    const rem = {};
+    const currencies = new Set([
+      ...Object.keys(totalPurchasesAmount || {}),
+      ...Object.keys(totalPaymentsAmount || {}),
+      ...Object.keys(totalReturnsAmount || {}),
+    ]);
+    for (const cur of currencies) {
+      const p = Number(totalPurchasesAmount?.[cur] || 0);
+      const paid = Number(totalPaymentsAmount?.[cur] || 0);
+      const ret = Number(totalReturnsAmount?.[cur] || 0);
+      rem[cur] = p - paid - ret;
+    }
+    return rem;
+  })();
 
   $: filteredPurchases = (() => {
     let result = purchases.filter((p) => {
@@ -326,6 +406,9 @@
         </SummaryCard>
         <SummaryCard label={t('Total Purchases Amount')} icon="bi-cash-stack" tone="cyan">
           {@html formatValueObj(totalPurchasesAmount)}
+        </SummaryCard>
+        <SummaryCard label={t('Remaining Balance')} icon="bi-wallet2" tone="green">
+          {@html `<span class="text-success">${formatValueObj(remainingBalance)}</span>`}
         </SummaryCard>
       </div>
     </svelte:fragment>
@@ -515,6 +598,9 @@
                       <i class="bi bi-arrow-{sortDirection === 'asc' ? 'up' : 'down'} sort-icon"></i>
                   {/if}
                 </th>
+                  <th>
+                    {t('Remaining')}
+                  </th>
                   <th class="cursor-pointer" on:click={() => setSort('warehouse_id')}>
                     {t('Warehouse')}
                     {#if sortColumn === 'warehouse_id'}
@@ -562,6 +648,18 @@
                     <span class="amount-pill">
                       <span dir="ltr">{Number(p.total_amount || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })}</span>
                       {t(p.currency)}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="amount-pill">
+                      {#if purchaseRemainingMap && purchaseRemainingMap[p.id] !== undefined}
+                        <strong class={purchaseRemainingMap[p.id] > 0 ? 'text-success' : purchaseRemainingMap[p.id] < 0 ? 'text-danger' : ''}>
+                          <span dir="ltr">{Number(purchaseRemainingMap[p.id] || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })}</span>
+                        </strong>
+                        <small>{t(p.currency)}</small>
+                      {:else}
+                        —
+                      {/if}
                     </span>
                   </td>
                   <td>{warehouses.find((w) => w.id == p.warehouse_id)?.name || '—'}</td>

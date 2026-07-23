@@ -1143,7 +1143,7 @@
 
           <div>
             <h2>{t('Description')}</h2>
-            <p>{t('Description')}</p>
+           
           </div>
         </div>
       </header>
@@ -1160,10 +1160,7 @@
             placeholder={t('Description')}></textarea>
         {/if}
 
-        <span class="sale-description-hint">
-          <i class="bi bi-info-circle" aria-hidden="true"></i>
-          {t('Description')}
-        </span>
+      
       </div>
     </section>
 
@@ -1193,6 +1190,111 @@
       </header>
 
       <div class="sale-payment-body">
+        <section class="sale-payment-panel sale-payment-method-panel">
+          <header class="sale-payment-panel__header">
+            <span class="sale-payment-panel__icon sale-payment-panel__icon--method">
+              <i class="bi bi-credit-card" aria-hidden="true"></i>
+            </span>
+
+            <div>
+              <h3>{t('Payment')}</h3>
+              <p>{t('Treasury')} / {t('Track')}</p>
+            </div>
+          </header>
+
+        <div class="sale-payment-methods">
+          <button
+            type="button"
+            class="sale-payment-method"
+            class:is-active={second_entry_account == track_ID}
+            on:click={() => {
+              filteredSecondAccounts = accounts;
+              showTrackModal = true;
+            }}>
+            <span class="sale-payment-method__icon sale-payment-method__icon--track">
+              <i class="bi bi-person-check" aria-hidden="true"></i>
+            </span>
+
+            <span class="sale-payment-method__copy">
+              <strong>{t('Track')}</strong>
+              <small>
+                {#if second_entry_account == track_ID}
+                  {t('Lang') === 'en'
+                    ? accounts.find((a) => a.id === track_ID)?.name
+                    : t('Lang') === 'fa'
+                      ? accounts.find((a) => a.id === track_ID)?.name_fa
+                      : t('Lang') === 'ps'
+                        ? accounts.find((a) => a.id === track_ID)?.name_ps
+                        : accounts.find((a) => a.id === track_ID)?.name}
+                {:else}
+                  {t('Account')}
+                {/if}
+              </small>
+            </span>
+
+            <span class="sale-payment-method__check">
+              <i
+                class="bi bi-{second_entry_account == track_ID
+                  ? 'check-circle-fill'
+                  : 'circle'}"
+                aria-hidden="true"></i>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="sale-payment-method"
+            class:is-active={second_entry_account == treasury_ID}
+            on:click={() => (second_entry_account = treasury_ID)}>
+            <span class="sale-payment-method__icon sale-payment-method__icon--treasury">
+              <i class="bi bi-box" aria-hidden="true"></i>
+            </span>
+
+            <span class="sale-payment-method__copy">
+              <strong>{t('Treasury')}</strong>
+              <small>
+                {#if second_entry_account == treasury_ID}
+                  <span dir="ltr">
+                    {Number(
+                      treasury_balance[paymentCurrency] || 0,
+                    ).toLocaleString(undefined, {
+                      maximumFractionDigits: 3,
+                    })}
+                  </span>
+                  {t(paymentCurrency)}
+                {:else}
+                  {t('Treasury')}
+                {/if}
+              </small>
+            </span>
+
+            <span class="sale-payment-method__check">
+              <i
+                class="bi bi-{second_entry_account == treasury_ID
+                  ? 'check-circle-fill'
+                  : 'circle'}"
+                aria-hidden="true"></i>
+            </span>
+          </button>
+        </div>
+
+        {#if second_entry_account == treasury_ID}
+          <div class="sale-treasury-status">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            <span>
+              {t('Treasury')}:
+              <strong dir="ltr">
+                {Number(
+                  treasury_balance[paymentCurrency] || 0,
+                ).toLocaleString(undefined, {
+                  maximumFractionDigits: 3,
+                })}
+              </strong>
+              {t(paymentCurrency)}
+            </span>
+          </div>
+        {/if}
+        </section>
         <section class="sale-payment-panel sale-payment-details-panel">
           <header class="sale-payment-panel__header">
             <span class="sale-payment-panel__icon sale-payment-panel__icon--details">
@@ -1324,111 +1426,7 @@
         </label>
         </section>
 
-        <section class="sale-payment-panel sale-payment-method-panel">
-          <header class="sale-payment-panel__header">
-            <span class="sale-payment-panel__icon sale-payment-panel__icon--method">
-              <i class="bi bi-credit-card" aria-hidden="true"></i>
-            </span>
-
-            <div>
-              <h3>{t('Payment')}</h3>
-              <p>{t('Treasury')} / {t('Track')}</p>
-            </div>
-          </header>
-
-        <div class="sale-payment-methods">
-          <button
-            type="button"
-            class="sale-payment-method"
-            class:is-active={second_entry_account == track_ID}
-            on:click={() => {
-              filteredSecondAccounts = accounts;
-              showTrackModal = true;
-            }}>
-            <span class="sale-payment-method__icon sale-payment-method__icon--track">
-              <i class="bi bi-person-check" aria-hidden="true"></i>
-            </span>
-
-            <span class="sale-payment-method__copy">
-              <strong>{t('Track')}</strong>
-              <small>
-                {#if second_entry_account == track_ID}
-                  {t('Lang') === 'en'
-                    ? accounts.find((a) => a.id === track_ID)?.name
-                    : t('Lang') === 'fa'
-                      ? accounts.find((a) => a.id === track_ID)?.name_fa
-                      : t('Lang') === 'ps'
-                        ? accounts.find((a) => a.id === track_ID)?.name_ps
-                        : accounts.find((a) => a.id === track_ID)?.name}
-                {:else}
-                  {t('Account')}
-                {/if}
-              </small>
-            </span>
-
-            <span class="sale-payment-method__check">
-              <i
-                class="bi bi-{second_entry_account == track_ID
-                  ? 'check-circle-fill'
-                  : 'circle'}"
-                aria-hidden="true"></i>
-            </span>
-          </button>
-
-          <button
-            type="button"
-            class="sale-payment-method"
-            class:is-active={second_entry_account == treasury_ID}
-            on:click={() => (second_entry_account = treasury_ID)}>
-            <span class="sale-payment-method__icon sale-payment-method__icon--treasury">
-              <i class="bi bi-box" aria-hidden="true"></i>
-            </span>
-
-            <span class="sale-payment-method__copy">
-              <strong>{t('Treasury')}</strong>
-              <small>
-                {#if second_entry_account == treasury_ID}
-                  <span dir="ltr">
-                    {Number(
-                      treasury_balance[paymentCurrency] || 0,
-                    ).toLocaleString(undefined, {
-                      maximumFractionDigits: 3,
-                    })}
-                  </span>
-                  {t(paymentCurrency)}
-                {:else}
-                  {t('Treasury')}
-                {/if}
-              </small>
-            </span>
-
-            <span class="sale-payment-method__check">
-              <i
-                class="bi bi-{second_entry_account == treasury_ID
-                  ? 'check-circle-fill'
-                  : 'circle'}"
-                aria-hidden="true"></i>
-            </span>
-          </button>
-        </div>
-
-        {#if second_entry_account == treasury_ID}
-          <div class="sale-treasury-status">
-            <i class="bi bi-info-circle" aria-hidden="true"></i>
-            <span>
-              {t('Treasury')}:
-              <strong dir="ltr">
-                {Number(
-                  treasury_balance[paymentCurrency] || 0,
-                ).toLocaleString(undefined, {
-                  maximumFractionDigits: 3,
-                })}
-              </strong>
-              {t(paymentCurrency)}
-            </span>
-          </div>
-        {/if}
-        </section>
+      
 
         <div class="sale-payable-card" class:is-invalid={payableAmount < 0}>
           <div class="sale-payable-card__overview">
