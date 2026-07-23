@@ -528,14 +528,7 @@
     <div class="card shadow-sm journal-form-card">
       <div class="card-body journal-form-fields">
         <div class="row g-2 journal-form-row">
-          <div class="col-md-3 journal-date-field">
-            <label class="journal-field-label">{t('Date')}</label>
-            <div class="input-group input-group-sm persianDatePicker journal-unified-input-group">
-              <input type="date" class="form-control form-control-sm" data-bind="date" bind:value={date} />
-              <span class="input-group-text persian-date-text"></span>
-            </div>
-          </div>
-          <div class="col-md-3 journal-customer-field">
+        <div class="col-md-3 journal-customer-field">
             <label class="journal-field-label">{t('Select Customer')}</label>
             <div class="position-relative">
               <div
@@ -668,6 +661,14 @@
               </div>
             {/if}
           </div>
+          <div class="col-md-3 journal-date-field">
+            <label class="journal-field-label">{t('Date')}</label>
+            <div class="input-group input-group-sm persianDatePicker journal-unified-input-group">
+              <input type="date" class="form-control form-control-sm" data-bind="date" bind:value={date} />
+              <span class="input-group-text persian-date-text"></span>
+            </div>
+          </div>
+          
           <div class="col-md-3 journal-debit-field">
             <label class="journal-field-label">{t('Debit')}</label>
             <div

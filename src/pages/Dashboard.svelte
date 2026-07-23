@@ -2255,6 +2255,11 @@
     font-weight: 950;
   }
 
+  .treasury-list strong.negative,
+  .treasury-list strong.negative span {
+    color: #dc3545 !important;
+  }
+
   .treasury-list strong small {
     font-size: 0.66rem;
   }
